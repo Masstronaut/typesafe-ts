@@ -8,6 +8,11 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/**
+ * A container for an optional value.
+ * @template ValueType
+ * @property {ValueType} value - The contained value.
+ */
 interface OptionalWithValue<ValueType> {
   value: ValueType;
 }
@@ -19,20 +24,19 @@ const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
 /**
- * Optional<ValueType> can be used to express a value that may or may not be present.
- * It is a type-safe alternative to `null` or `undefined` in TypeScript.
- * This is similar to the `Option` type in Rust or `Optional` in C++.
+ * Represents an optional value. It either contains a value of type `ValueType` or is empty.
  *
- * Optionals should not be constructed directly.
- * Instead, prefer using `optional.some()` or `optional.none()`.
+ * Optionals should be constructed using `optional.some()` or `optional.none()`.
  * These functions return objects implementing the `Optional` interface.
  *
- * Optional's monadic interface allows for typesafe handling of empty values,
- * even when `undefined` or `null` are valid values.
+ * The value of an Optional can only be accessed after checking `is_some()`.
  *
- * Optional also provides methods for monadic operations such as `map`, `and_then`, and `or_else`.
+ * When working with Optional values, it is preferred to use methods such as `map`,
+ * `and_then`, and `or_else` for sequential operations, and only check `is_some()` at the end.
  * These methods allow consumers to write type-safe code using functional patterns that are
- * more expressive than handling `undefined` or `null` type unions directly.
+ * more expressive than handling empty states at every step.
+ *
+ * @template ValueType - The type of the value that the Optional may contain.
  */
 export interface Optional<ValueType> {
   /**
@@ -86,7 +90,7 @@ export interface Optional<ValueType> {
    * ```
    *
    * @param mapper_fn - The function to transform the value, if present. Will not be called if the Optional is empty.
-   * @return A new Optional containing the result of transforming the value or empty if this Optional is empty.
+   * @returns {Optional<NewValueType>} A new Optional containing the result of transforming the value or empty if this Optional is empty.
    */
   map<NewValueType>(
     mapper_fn: (value: ValueType) => NewValueType,
