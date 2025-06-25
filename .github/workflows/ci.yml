@@ -27,17 +27,16 @@ jobs:
         run: npm run typecheck
         
       - name: Run tests with coverage
-        run: npm run test
+        run: npm run test > test-output.log 2>&1
         
       - name: Check 100% coverage
         run: |
           # Extract coverage percentage from test output
-          OUTPUT=$(npm run test 2>&1)
-          COVERAGE=$(echo "$OUTPUT" | grep "all files" | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+          COVERAGE=$(grep "all files" test-output.log | grep -o '[0-9]\+\.[0-9]\+' | head -1)
           echo "Coverage: $COVERAGE%"
           if [ -z "$COVERAGE" ]; then
             echo "Error: Could not parse coverage from output"
-            echo "$OUTPUT"
+            cat test-output.log
             exit 1
           fi
           if [ $(echo "$COVERAGE < 100" | awk '{print ($1 < $3)}') -eq 1 ]; then
