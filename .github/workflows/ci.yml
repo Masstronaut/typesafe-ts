@@ -29,17 +29,11 @@ jobs:
       - name: Run tests with coverage
         run: npm run test > test-output.log 2>&1
         
-      - name: Check 100% coverage and comment
+      - name: Check 100% coverage
         run: |
           # Extract coverage percentage from test output
           COVERAGE=$(grep "all files" test-output.log | grep -o '[0-9]\+\.[0-9]\+' | head -1)
           echo "Coverage: $COVERAGE%"
-          
-          # Comment on PR with coverage info
-          if [ -n "${{ github.event.pull_request.number }}" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body "🧪 **Test Coverage**: $COVERAGE%"
-          fi
-          
           if [ -z "$COVERAGE" ]; then
             echo "Error: Could not parse coverage from output"
             cat test-output.log
@@ -50,5 +44,3 @@ jobs:
             exit 1
           fi
           echo "✓ 100% test coverage achieved"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
