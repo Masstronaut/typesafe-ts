@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run type checking
+        run: npm run typecheck
+        
+      - name: Run tests with coverage
+        run: npm run test
+        
+      - name: Check 100% coverage
+        run: |
+          # Extract coverage percentage from test output
+          COVERAGE=$(npm run test 2>&1 | grep -oP 'all files\s+\|\s+\K[\d.]+(?=%)')
+          echo "Coverage: $COVERAGE%"
+          if [ $(echo "$COVERAGE < 100" | bc -l) -eq 1 ]; then
+            echo "Error: Test coverage is $COVERAGE%, but 100% is required"
+            exit 1
+          fi
+          echo "✓ 100% test coverage achieved"
