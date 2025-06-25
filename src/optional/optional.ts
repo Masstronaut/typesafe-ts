@@ -173,7 +173,7 @@ export interface Optional<ValueType> {
  * A concrete implementation of the Optional interface.
  * `Optional` uses the `is_some()` [type predicate](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates) method to narrow the interface to `OptionalWithValue<ValueType>` when it contains a value.
  * Because of that behavior, it's best not to directly expose/use the constructor of this class.
- * Instead, prefer using `optional.some()` or `optional.none<ValueType>()` to create instatiations typed with only the public interface of `Optional<ValueType>`.
+ * Instead, prefer using `optional.some()` or `optional.none<ValueType>()` to create instantiations typed with only the public interface of `Optional<ValueType>`.
  *
  * @template ValueType - The type of the value that the Optional may contain.
  */
