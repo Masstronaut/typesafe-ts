@@ -26,7 +26,7 @@ export interface Optional<ValueType> {
 
   // If the optional has a value, map it and return a new Optional with the mapped value.
   // Otherwise, return an empty Optional.
-  mp<NewValueType>(
+  map<NewValueType>(
     mapper_fn: (value: ValueType) => NewValueType,
   ): Optional<NewValueType>;
 
@@ -52,7 +52,6 @@ Sometimes an operation involves a series of steps, any of which may fail to prod
 Here's an example of such an operation where any of a series of steps may not produce a value. It could benefit from `Optional`'s monadic interface to simplify handling the absence of values.
 
 ```ts
-function getUserByUsername(username: string): User | null { ... }
 function getUserByUsername(username: string): User | null { ... }
 function getUserPosts(userId: string): Post[] | null { ... }
 function getPostComments(postId: string): Comment[] | null { ... }
