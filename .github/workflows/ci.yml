@@ -28,6 +28,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test > test-output.log 2>&1
         
+      - name: Show test output
+        run: cat test-output.log
+        
       - name: Check 100% coverage
         run: |
           # Extract coverage percentage from test output
