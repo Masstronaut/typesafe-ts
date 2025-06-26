@@ -26,7 +26,7 @@ type NoneType = typeof none_value;
 /**
  * The public interface of an Optional value. An Optional either contains a value of type `ValueType` or is empty.
  *
- * Optionals should be constructed using `optional.some()` or `optional.none()`.
+ * Optionals should be constructed using `optional.some()` or `optional.none<ValueType>()`.
  * These functions return objects implementing the `Optional` interface.
  *
  * The value of an Optional can only be accessed after checking `is_some()`.
@@ -63,7 +63,7 @@ export interface Optional<ValueType> {
    *
    * example:
    * ```ts
-   * const maybeValue = optional.none<string>(none);
+   * const maybeValue = optional.none<string>();
    * console.log(maybeValue.value_or("Default")); // prints "Default"
    * ```
    *
@@ -83,7 +83,7 @@ export interface Optional<ValueType> {
    *   console.log(maybe.value); // prints "HELLO"
    * }
    * // without a value
-   * const empty = optional.none<string>(none).map((v) => v.toUpperCase());
+   * const empty = optional.none<string>().map((v) => v.toUpperCase());
    * if (!empty.is_some()) {
    *   console.log("No value"); // prints "No value"
    * }
@@ -119,7 +119,7 @@ export interface Optional<ValueType> {
    *
    * example:
    * ```ts
-   * const maybe = optional.none<string>(none).or_else(() => optional.some("Default"));
+   * const maybe = optional.none<string>().or_else(() => optional.some("Default"));
    * if (maybe.is_some()) {
    *   console.log(maybe.value); // prints "Default"
    * }
@@ -129,6 +129,43 @@ export interface Optional<ValueType> {
    */
   or_else(fn: () => Optional<ValueType>): Optional<ValueType>;
 
+  /**
+   * Returns a generator that yields the contained value if this Optional has a value.
+   * If this Optional is empty, the generator yields nothing (completes immediately).
+   * This allows for easy iteration over present values in for-of loops and other iterator contexts.
+   * 
+   * @returns A generator that yields the value if present, otherwise yields nothing
+   * 
+   * @example
+   * ```typescript
+   * const someValue = optional.some(42);
+   * for (const value of someValue) {
+   *   console.log(value); // 42
+   * }
+   * 
+   * const emptyValue = optional.none<number>();
+   * for (const value of emptyValue) {
+   *   console.log("This won't execute");
+   * }
+   * 
+   * // Useful for collecting present values from multiple optionals
+   * const optionals = [
+   *   optional.some(1),
+   *   optional.none<number>(),
+   *   optional.some(3)
+   * ];
+   * 
+   * const values = [];
+   * for (const opt of optionals) {
+   *   for (const value of opt) {
+   *     values.push(value);
+   *   }
+   * }
+   * console.log(values); // [1, 3]
+   * ```
+   */
+  [Symbol.iterator](): Generator<ValueType, void, unknown>;
+
   get [Symbol.toStringTag](): "Optional";
 }
 
@@ -136,7 +173,7 @@ export interface Optional<ValueType> {
  * A concrete implementation of the Optional interface.
  * `Optional` uses the `is_some()` [type predicate](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates) method to narrow the interface to `OptionalWithValue<ValueType>` when it contains a value.
  * Because of that behavior, it's best not to directly expose/use the constructor of this class.
- * Instead, prefer using `optional.some()` or `optional.none()` to create instatiations typed with only the public interface of `Optional<ValueType>`.
+ * Instead, prefer using `optional.some()` or `optional.none<ValueType>()` to create instantiations typed with only the public interface of `Optional<ValueType>`.
  *
  * @template ValueType - The type of the value that the Optional may contain.
  */
@@ -172,6 +209,13 @@ class OptionalImpl<ValueType> implements Optional<ValueType> {
     }
     return this as unknown as Optional<NewValueType>;
   }
+
+  *[Symbol.iterator](): Generator<ValueType, void, unknown> {
+    if (this.is_some()) {
+      yield this.value;
+    }
+  }
+
   get [Symbol.toStringTag]() {
     return "Optional" as const;
   }

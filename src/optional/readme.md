@@ -37,6 +37,9 @@ export interface Optional<ValueType> {
 
   // Provide an alternative value if this Optional is empty.
   or_else(fn: () => Optional<ValueType>): Optional<ValueType>;
+
+  // Iterator support - yields the value if present, nothing if empty.
+  [Symbol.iterator](): Generator<ValueType, void, unknown>;
 }
 
 export const optional = {
