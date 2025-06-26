@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert";
 
-import { result, type Result } from "./result.ts";
+import { result } from "./result.ts";
 
 test("Result", async (t) => {
   t.test("Construction & Factory Methods", async (t) => {
@@ -102,15 +102,15 @@ test("Result", async (t) => {
     t.test("map() transforms Ok values", () => {
       const value = "hello";
       const okResult = result.ok<string, Error>(value);
-      const transformed = okResult.map(v => v.toUpperCase());
-      
+      const transformed = okResult.map((v) => v.toUpperCase());
+
       assert.ok(transformed.is_ok());
       if (transformed.is_ok()) {
         assert.strictEqual(transformed.value, "HELLO");
       }
 
       const numericResult = result.ok<number, Error>(42);
-      const numericTransformed = numericResult.map(v => v * 2);
+      const numericTransformed = numericResult.map((v) => v * 2);
       assert.ok(numericTransformed.is_ok());
       if (numericTransformed.is_ok()) {
         assert.strictEqual(numericTransformed.value, 84);
@@ -122,9 +122,10 @@ test("Result", async (t) => {
       const errorResult = result.error<string, Error>(error);
       const transformed = errorResult.map(() => {
         assert.fail("Map function should not run on Error result");
+        // @ts-expect-error (unreachable code)
         return "TRANSFORMED";
       });
-      
+
       assert.ok(transformed.is_error());
       if (transformed.is_error()) {
         assert.strictEqual(transformed.error, error);
@@ -134,11 +135,16 @@ test("Result", async (t) => {
     t.test("map_err() transforms Error values", () => {
       const originalError = new Error("Original error");
       const errorResult = result.error<string, Error>(originalError);
-      const transformed = errorResult.map_err(err => new Error(`Wrapped: ${err.message}`));
-      
+      const transformed = errorResult.map_err(
+        (err) => new Error(`Wrapped: ${err.message}`),
+      );
+
       assert.ok(transformed.is_error());
       if (transformed.is_error()) {
-        assert.strictEqual(transformed.error.message, "Wrapped: Original error");
+        assert.strictEqual(
+          transformed.error.message,
+          "Wrapped: Original error",
+        );
       }
     });
 
@@ -147,9 +153,10 @@ test("Result", async (t) => {
       const okResult = result.ok<string, Error>(value);
       const transformed = okResult.map_err(() => {
         assert.fail("Map_err function should not run on Ok result");
+        // @ts-expect-error (unreachable code)
         return new Error("Should not happen");
       });
-      
+
       assert.ok(transformed.is_ok());
       if (transformed.is_ok()) {
         assert.strictEqual(transformed.value, value);
@@ -163,9 +170,9 @@ test("Result", async (t) => {
       const okResult = result.ok<string, Error>(value);
       const matched = okResult.match({
         on_ok: (v) => `Value is ${v}`,
-        on_error: (e) => `Error: ${e.message}`
+        on_error: (e) => `Error: ${e.message}`,
       });
-      
+
       assert.strictEqual(matched, "Value is Hello");
     });
 
@@ -174,20 +181,21 @@ test("Result", async (t) => {
       const errorResult = result.error<string, Error>(error);
       const matched = errorResult.match({
         on_ok: (v) => `Value is ${v}`,
-        on_error: (e) => `Error: ${e.message}`
+        on_error: (e) => `Error: ${e.message}`,
       });
-      
+
       assert.strictEqual(matched, "Error: Test error");
     });
-
   });
 
   t.test("Monadic Chaining", async (t) => {
     t.test("and_then() chains Ok results through function", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
-      const chained = okResult.and_then(v => result.ok<number, Error>(v.length));
-      
+      const chained = okResult.and_then((v) =>
+        result.ok<number, Error>(v.length),
+      );
+
       assert.ok(chained.is_ok());
       if (chained.is_ok()) {
         assert.strictEqual(chained.value, 5);
@@ -199,9 +207,10 @@ test("Result", async (t) => {
       const errorResult = result.error<string, Error>(error);
       const chained = errorResult.and_then(() => {
         assert.fail("And_then function should not run on Error result");
+        // @ts-expect-error (unreachable code)
         return result.ok<number, Error>(42);
       });
-      
+
       assert.ok(chained.is_error());
       if (chained.is_error()) {
         assert.strictEqual(chained.error, error);
@@ -211,8 +220,10 @@ test("Result", async (t) => {
     t.test("or_else() provides fallback for Error results", () => {
       const originalError = new Error("Original error");
       const errorResult = result.error<string, Error>(originalError);
-      const fallback = errorResult.or_else(() => result.ok<string, Error>("Fallback value"));
-      
+      const fallback = errorResult.or_else(() =>
+        result.ok<string, Error>("Fallback value"),
+      );
+
       assert.ok(fallback.is_ok());
       if (fallback.is_ok()) {
         assert.strictEqual(fallback.value, "Fallback value");
@@ -224,9 +235,10 @@ test("Result", async (t) => {
       const okResult = result.ok<string, Error>(value);
       const fallback = okResult.or_else(() => {
         assert.fail("Or_else function should not run on Ok result");
+        // @ts-expect-error (unreachable code)
         return result.ok<string, Error>("Should not happen");
       });
-      
+
       assert.ok(fallback.is_ok());
       if (fallback.is_ok()) {
         assert.strictEqual(fallback.value, value);
@@ -236,11 +248,12 @@ test("Result", async (t) => {
 
   t.test("Complex Chaining", async (t) => {
     t.test("can chain multiple map operations", () => {
-      const chainedResult = result.ok<string, Error>("hello")
-        .map(v => v.toUpperCase())
-        .map(v => v + " WORLD")
-        .map(v => v.length);
-      
+      const chainedResult = result
+        .ok<string, Error>("hello")
+        .map((v) => v.toUpperCase())
+        .map((v) => v + " WORLD")
+        .map((v) => v.length);
+
       assert.ok(chainedResult.is_ok());
       if (chainedResult.is_ok()) {
         assert.strictEqual(chainedResult.value, 11);
@@ -248,11 +261,12 @@ test("Result", async (t) => {
     });
 
     t.test("can chain map with and_then operations", () => {
-      const chainedResult = result.ok<string, Error>("hello")
-        .map(v => v.toUpperCase())
-        .and_then(v => result.ok<number, Error>(v.length))
-        .map(v => v * 2);
-      
+      const chainedResult = result
+        .ok<string, Error>("hello")
+        .map((v) => v.toUpperCase())
+        .and_then((v) => result.ok<number, Error>(v.length))
+        .map((v) => v * 2);
+
       assert.ok(chainedResult.is_ok());
       if (chainedResult.is_ok()) {
         assert.strictEqual(chainedResult.value, 10);
@@ -261,16 +275,19 @@ test("Result", async (t) => {
 
     t.test("chains short-circuit on first error", () => {
       const error = new Error("Test error");
-      const chainedResult = result.error<string, Error>(error)
+      const chainedResult = result
+        .error<string, Error>(error)
         .map(() => {
           assert.fail("Should not execute");
+          // @ts-expect-error (unreachable code)
           return "transformed";
         })
         .and_then(() => {
           assert.fail("Should not execute");
+          // @ts-expect-error (unreachable code)
           return result.ok<number, Error>(42);
         });
-      
+
       assert.ok(chainedResult.is_error());
       if (chainedResult.is_error()) {
         assert.strictEqual(chainedResult.error, error);
@@ -282,7 +299,7 @@ test("Result", async (t) => {
     t.test("has correct Symbol.toStringTag", () => {
       const okResult = result.ok<string, Error>("test");
       const errorResult = result.error<string, Error>(new Error("test"));
-      
+
       assert.strictEqual(okResult[Symbol.toStringTag], "Result");
       assert.strictEqual(errorResult[Symbol.toStringTag], "Result");
     });
@@ -296,10 +313,10 @@ test("Result", async (t) => {
           this.code = code;
         }
       }
-      
+
       const error = new CustomError("Custom error", 404);
       const errorResult = result.error<string, CustomError>(error);
-      
+
       assert.ok(errorResult.is_error());
       if (errorResult.is_error()) {
         assert.strictEqual(errorResult.error.code, 404);
@@ -310,7 +327,7 @@ test("Result", async (t) => {
     t.test("asserts construction invariant", () => {
       const Constructor = result.ok(1).constructor as any;
       assert.throws(() => new Constructor({}));
-      assert.throws(() => new Constructor({ok: 1, error: new Error()}));
+      assert.throws(() => new Constructor({ ok: 1, error: new Error() }));
     });
   });
 
@@ -318,11 +335,11 @@ test("Result", async (t) => {
     t.test("Ok result yields its value in for-of loop", () => {
       const okResult = result.ok(42);
       const values: number[] = [];
-      
+
       for (const value of okResult) {
         values.push(value);
       }
-      
+
       assert.strictEqual(values.length, 1);
       assert.strictEqual(values[0], 42);
     });
@@ -330,11 +347,11 @@ test("Result", async (t) => {
     t.test("Error result yields nothing in for-of loop", () => {
       const errorResult = result.error<number, Error>(new Error("Failed"));
       const values: number[] = [];
-      
+
       for (const value of errorResult) {
         values.push(value);
       }
-      
+
       assert.strictEqual(values.length, 0);
     });
 
@@ -344,55 +361,55 @@ test("Result", async (t) => {
         result.error<number, Error>(new Error("Failed")),
         result.ok(3),
         result.ok(5),
-        result.error<number, Error>(new Error("Another failure"))
+        result.error<number, Error>(new Error("Another failure")),
       ];
-      
+
       const successfulValues: number[] = [];
       for (const res of results) {
         for (const value of res) {
           successfulValues.push(value);
         }
       }
-      
+
       assert.deepStrictEqual(successfulValues, [1, 3, 5]);
     });
 
     t.test("generator works with Array.from", () => {
       const okResult = result.ok("hello");
       const values = Array.from(okResult);
-      
+
       assert.strictEqual(values.length, 1);
       assert.strictEqual(values[0], "hello");
 
       const errorResult = result.error<string, Error>(new Error("Failed"));
       const emptyValues = Array.from(errorResult);
-      
+
       assert.strictEqual(emptyValues.length, 0);
     });
 
     t.test("generator works with spread operator", () => {
       const okResult = result.ok(100);
       const values = [...okResult];
-      
+
       assert.strictEqual(values.length, 1);
       assert.strictEqual(values[0], 100);
 
       const errorResult = result.error<number, Error>(new Error("Failed"));
       const emptyValues = [...errorResult];
-      
+
       assert.strictEqual(emptyValues.length, 0);
     });
 
     t.test("can be used with destructuring", () => {
       const okResult = result.ok("test");
       const [first, second] = okResult;
-      
+
       assert.strictEqual(first, "test");
       assert.strictEqual(second, undefined);
 
       const errorResult = result.error<string, Error>(new Error("Failed"));
       const [errorFirst, errorSecond] = errorResult;
-      
+
       assert.strictEqual(errorFirst, undefined);
       assert.strictEqual(errorSecond, undefined);
     });
@@ -419,7 +436,7 @@ test("Result", async (t) => {
     t.test("result.of() wraps successful function execution", () => {
       const successFn = () => "success";
       const res = result.of(successFn);
-      
+
       assert.ok(res.is_ok());
       if (res.is_ok()) {
         assert.strictEqual(res.value, "success");
@@ -431,7 +448,7 @@ test("Result", async (t) => {
         throw new Error("Test error");
       };
       const res = result.of(throwingFn);
-      
+
       assert.ok(res.is_error());
       if (res.is_error()) {
         assert.strictEqual(res.error.message, "Test error");
@@ -444,7 +461,7 @@ test("Result", async (t) => {
         throw "string error";
       };
       const res = result.of(throwingFn);
-      
+
       assert.ok(res.is_error());
       if (res.is_error()) {
         assert.strictEqual(res.error.message, "string error");
@@ -478,7 +495,7 @@ test("Result", async (t) => {
         throw customError;
       };
       const res = result.of(throwingFn);
-      
+
       assert.ok(res.is_error());
       if (res.is_error()) {
         assert.strictEqual(res.error, customError);
@@ -489,52 +506,61 @@ test("Result", async (t) => {
     t.test("result.of_async() wraps successful async function", async () => {
       const asyncSuccessFn = async () => "async success";
       const res = await result.of_async(asyncSuccessFn);
-      
+
       assert.ok(res.is_ok());
       if (res.is_ok()) {
         assert.strictEqual(res.value, "async success");
       }
     });
 
-    t.test("result.of_async() wraps async function that rejects with Error", async () => {
-      const asyncThrowingFn = async () => {
-        throw new Error("Async error");
-      };
-      const res = await result.of_async(asyncThrowingFn);
-      
-      assert.ok(res.is_error());
-      if (res.is_error()) {
-        assert.strictEqual(res.error.message, "Async error");
-        assert.ok(res.error instanceof Error);
-      }
-    });
+    t.test(
+      "result.of_async() wraps async function that rejects with Error",
+      async () => {
+        const asyncThrowingFn = async () => {
+          throw new Error("Async error");
+        };
+        const res = await result.of_async(asyncThrowingFn);
 
-    t.test("result.of_async() wraps async function that rejects with non-Error", async () => {
-      const asyncThrowingFn = async () => {
-        throw "async string error";
-      };
-      const res = await result.of_async(asyncThrowingFn);
-      
-      assert.ok(res.is_error());
-      if (res.is_error()) {
-        assert.strictEqual(res.error.message, "async string error");
-        assert.ok(res.error instanceof Error);
-      }
-    });
+        assert.ok(res.is_error());
+        if (res.is_error()) {
+          assert.strictEqual(res.error.message, "Async error");
+          assert.ok(res.error instanceof Error);
+        }
+      },
+    );
 
-    t.test("result.of_async() works with different resolved types", async () => {
-      const numberResult = await result.of_async(async () => 42);
-      assert.ok(numberResult.is_ok());
-      if (numberResult.is_ok()) {
-        assert.strictEqual(numberResult.value, 42);
-      }
+    t.test(
+      "result.of_async() wraps async function that rejects with non-Error",
+      async () => {
+        const asyncThrowingFn = async () => {
+          throw "async string error";
+        };
+        const res = await result.of_async(asyncThrowingFn);
 
-      const arrayResult = await result.of_async(async () => [1, 2, 3]);
-      assert.ok(arrayResult.is_ok());
-      if (arrayResult.is_ok()) {
-        assert.deepStrictEqual(arrayResult.value, [1, 2, 3]);
-      }
-    });
+        assert.ok(res.is_error());
+        if (res.is_error()) {
+          assert.strictEqual(res.error.message, "async string error");
+          assert.ok(res.error instanceof Error);
+        }
+      },
+    );
+
+    t.test(
+      "result.of_async() works with different resolved types",
+      async () => {
+        const numberResult = await result.of_async(async () => 42);
+        assert.ok(numberResult.is_ok());
+        if (numberResult.is_ok()) {
+          assert.strictEqual(numberResult.value, 42);
+        }
+
+        const arrayResult = await result.of_async(async () => [1, 2, 3]);
+        assert.ok(arrayResult.is_ok());
+        if (arrayResult.is_ok()) {
+          assert.deepStrictEqual(arrayResult.value, [1, 2, 3]);
+        }
+      },
+    );
 
     t.test("result.of_async() preserves async Error types", async () => {
       const customError = new RangeError("Custom range error");
@@ -542,7 +568,7 @@ test("Result", async (t) => {
         throw customError;
       };
       const res = await result.of_async(asyncThrowingFn);
-      
+
       assert.ok(res.is_error());
       if (res.is_error()) {
         assert.strictEqual(res.error, customError);
@@ -553,10 +579,10 @@ test("Result", async (t) => {
     t.test("result.of_async() properly awaits async operations", async () => {
       let counter = 0;
       const asyncFn = async () => {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return ++counter;
       };
-      
+
       const res = await result.of_async(asyncFn);
       assert.ok(res.is_ok());
       if (res.is_ok()) {
@@ -565,26 +591,31 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of() and result.of_async() work with JSON parsing example", async () => {
-      // Sync JSON parsing
-      const validJson = result.of(() => JSON.parse('{"name": "John"}'));
-      assert.ok(validJson.is_ok());
-      if (validJson.is_ok()) {
-        assert.strictEqual(validJson.value.name, "John");
-      }
+    t.test(
+      "result.of() and result.of_async() work with JSON parsing example",
+      async () => {
+        // Sync JSON parsing
+        const validJson = result.of(() => JSON.parse('{"name": "John"}'));
+        assert.ok(validJson.is_ok());
+        if (validJson.is_ok()) {
+          assert.strictEqual(validJson.value.name, "John");
+        }
 
-      const invalidJson = result.of(() => JSON.parse('invalid json'));
-      assert.ok(invalidJson.is_error());
-      if (invalidJson.is_error()) {
-        assert.ok(invalidJson.error instanceof SyntaxError);
-      }
+        const invalidJson = result.of(() => JSON.parse("invalid json"));
+        assert.ok(invalidJson.is_error());
+        if (invalidJson.is_error()) {
+          assert.ok(invalidJson.error instanceof SyntaxError);
+        }
 
-      // Async version
-      const asyncValidJson = await result.of_async(async () => JSON.parse('{"age": 30}'));
-      assert.ok(asyncValidJson.is_ok());
-      if (asyncValidJson.is_ok()) {
-        assert.strictEqual(asyncValidJson.value.age, 30);
-      }
-    });
+        // Async version
+        const asyncValidJson = await result.of_async(async () =>
+          JSON.parse('{"age": 30}'),
+        );
+        assert.ok(asyncValidJson.is_ok());
+        if (asyncValidJson.is_ok()) {
+          assert.strictEqual(asyncValidJson.value.age, 30);
+        }
+      },
+    );
   });
 });

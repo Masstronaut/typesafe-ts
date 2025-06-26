@@ -8,8 +8,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import { optional, type Optional } from "../optional/optional.ts";
-
 /**
  * Represents a Result that contains an error value.
  * This interface is used for type narrowing after calling `is_error()`.
@@ -29,26 +27,26 @@ interface OkResult<ResultType> {
 /**
  * A monadic type that represents either a successful value or an error.
  * Result provides a type-safe way to handle operations that may fail without throwing exceptions.
- * 
+ *
  * @template ResultType - The type of the success value
  * @template ErrorType - The type of the error (must extend Error)
- * 
+ *
  * @example
  * ```typescript
  * import { result, type Result } from "./result.ts";
- * 
+ *
  * function divide(a: number, b: number): Result<number, Error> {
  *   if (b === 0) {
  *     return result.error(new Error("Division by zero"));
  *   }
  *   return result.ok(a / b);
  * }
- * 
+ *
  * const success = divide(10, 2);
  * if (success.is_ok()) {
  *   console.log("Result:", success.value); // Result: 5
  * }
- * 
+ *
  * const failure = divide(10, 0);
  * if (failure.is_error()) {
  *   console.log("Error:", failure.error.message); // Error: Division by zero
@@ -65,9 +63,9 @@ interface Result<ResultType, ErrorType extends Error> {
   /**
    * Type predicate that checks if this Result contains an error.
    * If true, TypeScript will narrow the type to include the `error` property.
-   * 
+   *
    * @returns True if this Result contains an error, false if it contains a value
-   * 
+   *
    * @example
    * ```typescript
    * const result = result.error(new Error("Something went wrong"));
@@ -81,9 +79,9 @@ interface Result<ResultType, ErrorType extends Error> {
   /**
    * Type predicate that checks if this Result contains a success value.
    * If true, TypeScript will narrow the type to include the `value` property.
-   * 
+   *
    * @returns True if this Result contains a value, false if it contains an error
-   * 
+   *
    * @example
    * ```typescript
    * const result = result.ok("Hello, World!");
@@ -96,15 +94,15 @@ interface Result<ResultType, ErrorType extends Error> {
 
   /**
    * Returns the contained value if Ok, otherwise returns the provided default value.
-   * 
+   *
    * @param value_if_error - The value to return if this Result contains an error
    * @returns The contained value if Ok, otherwise the default value
-   * 
+   *
    * @example
    * ```typescript
    * const success = result.ok(42);
    * console.log(success.value_or(0)); // 42
-   * 
+   *
    * const failure = result.error(new Error("Failed"));
    * console.log(failure.value_or(0)); // 0
    * ```
@@ -113,15 +111,15 @@ interface Result<ResultType, ErrorType extends Error> {
 
   /**
    * Returns the contained error if Error, otherwise returns the provided default error.
-   * 
+   *
    * @param error_if_ok - The error to return if this Result contains a value
    * @returns The contained error if Error, otherwise the default error
-   * 
+   *
    * @example
    * ```typescript
    * const failure = result.error(new Error("Original error"));
    * console.log(failure.error_or(new Error("Default"))); // Error: Original error
-   * 
+   *
    * const success = result.ok("value");
    * console.log(success.error_or(new Error("Default"))); // Error: Default
    * ```
@@ -131,17 +129,17 @@ interface Result<ResultType, ErrorType extends Error> {
   /**
    * Transforms the contained value if Ok, otherwise returns the error unchanged.
    * This is the functor map operation for Result.
-   * 
+   *
    * @template NewResultType - The type of the transformed value
    * @param fn - Function to transform the value if Ok
    * @returns A new Result with the transformed value if Ok, otherwise the original error
-   * 
+   *
    * @example
    * ```typescript
    * const success = result.ok(5);
    * const doubled = success.map(x => x * 2);
    * console.log(doubled.value_or(0)); // 10
-   * 
+   *
    * const failure = result.error(new Error("Failed"));
    * const transformed = failure.map(x => x * 2); // fn is not called
    * console.log(transformed.is_error()); // true
@@ -154,11 +152,11 @@ interface Result<ResultType, ErrorType extends Error> {
   /**
    * Transforms the contained error if Error, otherwise returns the value unchanged.
    * This allows for error transformation and chaining.
-   * 
+   *
    * @template NewErrorType - The type of the transformed error
    * @param fn - Function to transform the error if Error
    * @returns A new Result with the transformed error if Error, otherwise the original value
-   * 
+   *
    * @example
    * ```typescript
    * const failure = result.error(new Error("Original"));
@@ -166,7 +164,7 @@ interface Result<ResultType, ErrorType extends Error> {
    * if (wrapped.is_error()) {
    *   console.log(wrapped.error.message); // "Wrapped: Original"
    * }
-   * 
+   *
    * const success = result.ok("value");
    * const unchanged = success.map_err(err => new Error("Won't be called"));
    * console.log(unchanged.is_ok()); // true
@@ -176,18 +174,17 @@ interface Result<ResultType, ErrorType extends Error> {
     fn: (error: ErrorType) => NewErrorType,
   ): Result<ResultType, NewErrorType>;
 
-
   /**
    * Pattern matches against the Result, executing the appropriate callback and returning its result.
    * This is useful when you need to transform both Ok and Error cases into the same output type.
-   * 
+   *
    * @template OKMatchResultType - The return type of the on_ok callback
    * @template ErrorMatchResultType - The return type of the on_error callback
    * @param handlers - Object containing callback functions for Ok and Error cases
    * @param handlers.on_ok - Function to execute if Result is Ok, receiving the value
    * @param handlers.on_error - Function to execute if Result is Error, receiving the error
    * @returns The result of the executed callback
-   * 
+   *
    * @example
    * ```typescript
    * const success = result.ok(42);
@@ -196,7 +193,7 @@ interface Result<ResultType, ErrorType extends Error> {
    *   on_error: (error) => `Error occurred: ${error.message}`,
    * });
    * console.log(message); // "Value is 42"
-   * 
+   *
    * const failure = result.error(new Error("Something went wrong"));
    * const errorMessage = failure.match({
    *   on_ok: (value) => `Value is ${value}`,
@@ -217,25 +214,25 @@ interface Result<ResultType, ErrorType extends Error> {
    * Monadic bind operation. Chains another Result-returning operation if this Result is Ok.
    * If this Result is Error, the function is not called and the error is propagated.
    * This is also known as flatMap in some languages.
-   * 
+   *
    * @template NewResultType - The type of the value in the returned Result
    * @param fn - Function that takes the Ok value and returns a new Result
    * @returns The Result returned by fn if Ok, otherwise the original error
-   * 
+   *
    * @example
    * ```typescript
    * function parseNumber(str: string): Result<number, Error> {
    *   const num = Number(str);
    *   return isNaN(num) ? result.error(new Error("Not a number")) : result.ok(num);
    * }
-   * 
+   *
    * function divide(a: number, b: number): Result<number, Error> {
    *   return b === 0 ? result.error(new Error("Division by zero")) : result.ok(a / b);
    * }
-   * 
+   *
    * const computation = parseNumber("10")
    *   .and_then(num => divide(num, 2));
-   * 
+   *
    * if (computation.is_ok()) {
    *   console.log(computation.value); // 5
    * }
@@ -249,24 +246,24 @@ interface Result<ResultType, ErrorType extends Error> {
    * Provides a fallback Result if this Result is Error.
    * If this Result is Ok, the function is not called and the value is preserved.
    * This allows for error recovery and alternative computation paths.
-   * 
+   *
    * @template NewErrorType - The type of error in the fallback Result
    * @param fn - Function that takes the Error and returns a fallback Result
    * @returns The fallback Result returned by fn if Error, otherwise the original Ok value
-   * 
+   *
    * @example
    * ```typescript
    * function tryPrimary(): Result<string, Error> {
    *   return result.error(new Error("Primary failed"));
    * }
-   * 
+   *
    * function tryFallback(): Result<string, Error> {
    *   return result.ok("Fallback success");
    * }
-   * 
+   *
    * const outcome = tryPrimary()
    *   .or_else(() => tryFallback());
-   * 
+   *
    * if (outcome.is_ok()) {
    *   console.log(outcome.value); // "Fallback success"
    * }
@@ -280,28 +277,28 @@ interface Result<ResultType, ErrorType extends Error> {
    * Returns a generator that yields the contained value if this Result is Ok.
    * If this Result is Error, the generator yields nothing (completes immediately).
    * This allows for easy iteration over successful values in for-of loops and other iterator contexts.
-   * 
+   *
    * @returns A generator that yields the value if Ok, otherwise yields nothing
-   * 
+   *
    * @example
    * ```typescript
    * const success = result.ok(42);
    * for (const value of success) {
    *   console.log(value); // 42
    * }
-   * 
+   *
    * const failure = result.error(new Error("Failed"));
    * for (const value of failure) {
    *   console.log("This won't execute");
    * }
-   * 
+   *
    * // Useful for collecting successful values from multiple results
    * const results = [
    *   result.ok(1),
    *   result.error(new Error("Failed")),
    *   result.ok(3)
    * ];
-   * 
+   *
    * const values = [];
    * for (const res of results) {
    *   for (const value of res) {
@@ -376,7 +373,6 @@ class ResultImpl<ResultType, ErrorType extends Error>
     return this as unknown as Result<ResultType, NewErrorType>;
   }
 
-
   match<OKMatchResultType, ErrorMatchResultType>({
     on_ok,
     on_error,
@@ -429,20 +425,20 @@ class ResultImpl<ResultType, ErrorType extends Error>
 /**
  * Factory functions for creating Result instances.
  * This module provides the primary API for constructing Result values.
- * 
+ *
  * @example
  * ```typescript
  * import { result, type Result } from "./result.ts";
- * 
+ *
  * // Creating success results
  * const success = result.ok("Hello, World!");
  * const number = result.ok(42);
  * const nullValue = result.ok(null);
- * 
+ *
  * // Creating error results
  * const failure = result.error(new Error("Something went wrong"));
  * const customError = result.error(new TypeError("Type mismatch"));
- * 
+ *
  * // Chaining operations
  * const processed = result.ok("  hello  ")
  *   .map(str => str.trim())
@@ -454,12 +450,12 @@ const result = Object.freeze({
   /**
    * Creates a successful Result containing the provided value.
    * The value can be of any type, including null and undefined.
-   * 
+   *
    * @template ResultType - The type of the success value
    * @template ErrorType - The type of potential errors (defaults to Error)
    * @param value - The value to wrap in a successful Result
    * @returns A Result containing the provided value
-   * 
+   *
    * @example
    * ```typescript
    * const stringValue = result.ok("Hello");
@@ -467,7 +463,7 @@ const result = Object.freeze({
    * const objectValue = result.ok({ name: "John", age: 30 });
    * const nullValue = result.ok(null);
    * const undefinedValue = result.ok(undefined);
-   * 
+   *
    * // All of these are Ok Results
    * console.log(stringValue.is_ok()); // true
    * console.log(numberValue.value_or(0)); // 42
@@ -478,28 +474,28 @@ const result = Object.freeze({
   /**
    * Creates a failed Result containing the provided error.
    * The error must be an instance of Error or a subclass of Error.
-   * 
+   *
    * @template ResultType - The type of potential success values
    * @template ErrorType - The type of the error (defaults to Error)
    * @param error - The error to wrap in a failed Result
    * @returns A Result containing the provided error
-   * 
+   *
    * @example
    * ```typescript
    * const basicError = result.error(new Error("Basic error"));
    * const typeError = result.error<string, TypeError>(new TypeError("Wrong type"));
    * const customError = result.error(new RangeError("Out of range"));
-   * 
+   *
    * // Explicitly typed error results
    * const parseError: Result<number, Error> = result.error<number, Error>(new Error("Parse failed"));
    * const validationError = result.error<User, ValidationError>(new ValidationError("Invalid data"));
-   * 
+   *
    * // All of these are Error Results
    * console.log(basicError.is_error()); // true
    * if (typeError.is_error()) {
    *   console.log(typeError.error.message); // "Wrong type"
    * }
-   * 
+   *
    * // Custom error classes work too
    * class ValidationError extends Error {
    *   field: string;
@@ -517,28 +513,28 @@ const result = Object.freeze({
    * Executes a function and wraps the result in a Result type.
    * If the function executes successfully, returns an Ok Result with the return value.
    * If the function throws an error, returns an Error Result with the caught error.
-   * 
+   *
    * @template T - The return type of the function
    * @param fn - A function that may throw an error
    * @returns A Result containing either the function's return value or the caught error
-   * 
+   *
    * @example
    * ```typescript
    * // Working with a function that might throw
    * function parseJSON(jsonString: string): any {
    *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
    * }
-   * 
+   *
    * const validResult = result.of(() => parseJSON('{"name": "John"}'));
    * if (validResult.is_ok()) {
    *   console.log(validResult.value.name); // "John"
    * }
-   * 
+   *
    * const invalidResult = result.of(() => parseJSON('invalid json'));
    * if (invalidResult.is_error()) {
    *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
    * }
-   * 
+   *
    * // Converting existing throwing APIs
    * const fileContent = result.of(() => fs.readFileSync('file.txt', 'utf8'));
    * const parsedNumber = result.of(() => {
@@ -552,7 +548,9 @@ const result = Object.freeze({
     try {
       return ResultImpl.ok(fn());
     } catch (error) {
-      return ResultImpl.error(error instanceof Error ? error : new Error(String(error)));
+      return ResultImpl.error(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   },
 
@@ -560,11 +558,11 @@ const result = Object.freeze({
    * Executes an async function and wraps the result in a Promise<Result>.
    * If the function resolves successfully, returns an Ok Result with the resolved value.
    * If the function rejects or throws, returns an Error Result with the caught error.
-   * 
+   *
    * @template T - The resolved type of the async function
    * @param fn - An async function that may reject or throw
    * @returns A Promise resolving to a Result containing either the resolved value or the caught error
-   * 
+   *
    * @example
    * ```typescript
    * // Working with async functions that might reject
@@ -573,14 +571,14 @@ const result = Object.freeze({
    *   if (!response.ok) throw new Error(`HTTP ${response.status}`);
    *   return response.json();
    * }
-   * 
+   *
    * const userResult = await result.of_async(() => fetchUserData("123"));
    * if (userResult.is_ok()) {
    *   console.log(userResult.value.name);
    * } else {
    *   console.log("Failed to fetch user:", userResult.error.message);
    * }
-   * 
+   *
    * // Converting Promise-based APIs
    * const fileContent = await result.of_async(() => fs.promises.readFile('file.txt', 'utf8'));
    * const apiData = await result.of_async(async () => {
@@ -595,7 +593,9 @@ const result = Object.freeze({
       const value = await fn();
       return ResultImpl.ok(value);
     } catch (error) {
-      return ResultImpl.error(error instanceof Error ? error : new Error(String(error)));
+      return ResultImpl.error(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   },
 });
