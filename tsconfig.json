@@ -1,4 +1,5 @@
 {
+  "extends": "@tsconfig/strictest/tsconfig.json",
   "compilerOptions": {
     /* Base Options: */
     "esModuleInterop": true,
@@ -13,6 +14,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "allowUnreachableCode": false,
     /* Node Stuff */
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true,
