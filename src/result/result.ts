@@ -392,7 +392,7 @@ class ResultImpl<ResultType, ErrorType extends Error>
     if (this.is_ok()) {
       return fn(this.value);
     }
-    return result.error(this.error as ErrorType);
+    return this as unknown as Result<NewResultType, ErrorType>;
   }
 
   or_else<NewErrorType extends Error>(
