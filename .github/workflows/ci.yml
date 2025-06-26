@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: ['**']
   pull_request:
     branches: ['**']
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   test:
@@ -27,7 +26,7 @@ jobs:
         run: npm run typecheck
         
       - name: Run tests with coverage
-        run: npm run test > test-output.log 2>&1
+        run: npm run test --color=always 2>&1 | tee test-output.log
         
       - name: Check 100% coverage
         run: |
