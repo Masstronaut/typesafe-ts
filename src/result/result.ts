@@ -598,6 +598,42 @@ const result = Object.freeze({
       );
     }
   },
+
+  retry: <ValueType, ErrorType extends Error>(
+    fn: () => Result<ValueType, ErrorType>,
+    retries: number,
+  ): Result<
+    ValueType,
+    { message: string; errors: ErrorType[]; name: string }
+  > => {
+    // RetryError type
+    type RetryError = {
+      name: "Result Retry Error";
+      message: `Failed after ${number} attempts.`;
+      errors: ErrorType[];
+    };
+    const errors: ErrorType[] = [];
+    for (let i = 0; i < retries; i++) {
+      const result = fn();
+      if (result.is_ok()) {
+        return result.map_err(
+          (error) =>
+            ({
+              name: "Result Retry Error",
+              message: `Failed after ${i + 1} attempts.`,
+              errors: [...errors, error],
+            }) as RetryError,
+        );
+      } else if (result.is_error()) {
+        errors.push(result.error);
+      }
+    }
+    return ResultImpl.error<ValueType, RetryError>({
+      message: `Failed after ${retries} attempts.`,
+      name: "Result Retry Error",
+      errors: errors,
+    } as RetryError);
+  },
 });
 
 export { result, type Result };
