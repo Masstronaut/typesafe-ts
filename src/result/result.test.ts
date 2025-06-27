@@ -618,4 +618,208 @@ test("Result", async (t) => {
       },
     );
   });
+
+  t.test("Retry Function", async (t) => {
+    t.test("returns Ok on first success", () => {
+      let attempts = 0;
+      const successFn = () => {
+        attempts++;
+        return result.ok(`success after ${attempts} attempts`);
+      };
+
+      const retryResult = result.retry(successFn, 3);
+      assert.ok(retryResult.is_ok());
+      if (retryResult.is_ok()) {
+        assert.strictEqual(retryResult.value, "success after 1 attempts");
+      }
+      assert.strictEqual(attempts, 1);
+    });
+
+    t.test("retries until success", () => {
+      let attempts = 0;
+      const eventualSuccessFn = () => {
+        attempts++;
+        if (attempts < 3) {
+          return result.error(new Error(`Attempt ${attempts} failed`));
+        }
+        return result.ok(`success after ${attempts} attempts`);
+      };
+
+      const retryResult = result.retry(eventualSuccessFn, 5);
+      assert.ok(retryResult.is_ok());
+      if (retryResult.is_ok()) {
+        assert.strictEqual(retryResult.value, "success after 3 attempts");
+      }
+      assert.strictEqual(attempts, 3);
+    });
+
+    t.test("fails after exhausting all retries", () => {
+      let attempts = 0;
+      const alwaysFailFn = () => {
+        attempts++;
+        return result.error(new Error(`Attempt ${attempts} failed`));
+      };
+
+      const retryResult = result.retry(alwaysFailFn, 3);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 3 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 3);
+        assert.strictEqual(retryResult.error.errors[0].message, "Attempt 1 failed");
+        assert.strictEqual(retryResult.error.errors[1].message, "Attempt 2 failed");
+        assert.strictEqual(retryResult.error.errors[2].message, "Attempt 3 failed");
+      }
+      assert.strictEqual(attempts, 3);
+    });
+
+    t.test("handles zero retries", () => {
+      let attempts = 0;
+      const failFn = () => {
+        attempts++;
+        return result.error(new Error("Always fails"));
+      };
+
+      const retryResult = result.retry(failFn, 0);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 0);
+      }
+      assert.strictEqual(attempts, 0);
+    });
+
+    t.test("handles single retry", () => {
+      let attempts = 0;
+      const failOnceFn = () => {
+        attempts++;
+        if (attempts === 1) {
+          return result.error(new Error("First attempt failed"));
+        }
+        return result.ok("Second attempt succeeded");
+      };
+
+      const retryResult = result.retry(failOnceFn, 1);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 1 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 1);
+        assert.strictEqual(retryResult.error.errors[0].message, "First attempt failed");
+      }
+      assert.strictEqual(attempts, 1);
+    });
+
+    t.test("works with different value types", () => {
+      const numberFn = () => result.ok(42);
+      const numberResult = result.retry(numberFn, 1);
+      assert.ok(numberResult.is_ok());
+      if (numberResult.is_ok()) {
+        assert.strictEqual(numberResult.value, 42);
+      }
+
+      const objectFn = () => result.ok({ name: "test" });
+      const objectResult = result.retry(objectFn, 1);
+      assert.ok(objectResult.is_ok());
+      if (objectResult.is_ok()) {
+        assert.deepStrictEqual(objectResult.value, { name: "test" });
+      }
+
+      const nullFn = () => result.ok(null);
+      const nullResult = result.retry(nullFn, 1);
+      assert.ok(nullResult.is_ok());
+      if (nullResult.is_ok()) {
+        assert.strictEqual(nullResult.value, null);
+      }
+    });
+
+    t.test("works with different error types", () => {
+      class CustomError extends Error {
+        code: number;
+        constructor(message: string, code: number) {
+          super(message);
+          this.name = "CustomError";
+          this.code = code;
+        }
+      }
+
+      let attempts = 0;
+      const customErrorFn = () => {
+        attempts++;
+        return result.error(new CustomError(`Custom error ${attempts}`, 500 + attempts));
+      };
+
+      const retryResult = result.retry(customErrorFn, 2);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 2 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 2);
+        assert.ok(retryResult.error.errors[0] instanceof CustomError);
+        assert.ok(retryResult.error.errors[1] instanceof CustomError);
+        assert.strictEqual((retryResult.error.errors[0] as CustomError).code, 501);
+        assert.strictEqual((retryResult.error.errors[1] as CustomError).code, 502);
+      }
+    });
+
+    t.test("preserves error collection across attempts", () => {
+      const errors = [
+        new Error("First error"),
+        new TypeError("Second error"),
+        new RangeError("Third error")
+      ];
+      let attempts = 0;
+      
+      const multiErrorFn = () => {
+        const error = errors[attempts];
+        attempts++;
+        return result.error(error);
+      };
+
+      const retryResult = result.retry(multiErrorFn, 3);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.errors.length, 3);
+        assert.strictEqual(retryResult.error.errors[0], errors[0]);
+        assert.strictEqual(retryResult.error.errors[1], errors[1]);
+        assert.strictEqual(retryResult.error.errors[2], errors[2]);
+        assert.ok(retryResult.error.errors[0] instanceof Error);
+        assert.ok(retryResult.error.errors[1] instanceof TypeError);
+        assert.ok(retryResult.error.errors[2] instanceof RangeError);
+      }
+    });
+
+    t.test("can be chained with other Result operations", () => {
+      let attempts = 0;
+      const eventualSuccessFn = () => {
+        attempts++;
+        if (attempts < 2) {
+          return result.error(new Error(`Attempt ${attempts} failed`));
+        }
+        return result.ok(10);
+      };
+
+      const chainedResult = result.retry(eventualSuccessFn, 3)
+        .map(value => value * 2)
+        .and_then(value => value > 15 ? result.ok(value) : result.error(new Error("Too small")));
+
+      assert.ok(chainedResult.is_ok());
+      if (chainedResult.is_ok()) {
+        assert.strictEqual(chainedResult.value, 20);
+      }
+    });
+
+    t.test("retry error can be handled with match", () => {
+      const alwaysFailFn = () => result.error(new Error("Always fails"));
+      
+      const retryResult = result.retry(alwaysFailFn, 2);
+      const matchResult = retryResult.match({
+        on_ok: (value) => `Success: ${value}`,
+        on_error: (error) => `Failed with ${error.errors.length} errors: ${error.message}`
+      });
+
+      assert.strictEqual(matchResult, "Failed with 2 errors: Failed after 2 attempts.");
+    });
+  });
 });

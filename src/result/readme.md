@@ -72,6 +72,7 @@ export const result = {
   error, // constructs a `Result` with an error
   of, // constructs a `Result` from a provided function. Ok if it returns, Error if it throws.
   of_async, // constructs a `Result` from an async function. Ok if it resolves, Error if it rejects or throws
+  retry, // executes a Result-returning function multiple times until success or retry limit is reached
 };
 ```
 

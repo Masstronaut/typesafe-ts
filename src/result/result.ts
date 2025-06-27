@@ -315,7 +315,8 @@ const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements Result<ResultType, ErrorType> {
+  implements Result<ResultType, ErrorType>
+{
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -599,6 +600,57 @@ const result = Object.freeze({
     }
   },
 
+  /**
+   * Executes a function that returns a Result multiple times until it succeeds or the retry limit is reached.
+   * If the function returns an Ok Result, the retry operation stops and returns that successful Result.
+   * If the function returns an Error Result, it's retried up to the specified number of times.
+   * If all retries fail, returns an Error Result containing all the accumulated errors.
+   *
+   * @template ValueType - The type of the success value
+   * @template ErrorType - The type of the error (must extend Error)
+   * @param fn - Function that returns a Result and may be retried
+   * @param retries - Maximum number of attempts to make (0 means no attempts)
+   * @returns A Result containing either the successful value or a retry error with all accumulated errors
+   *
+   * @example
+   * ```typescript
+   * let attempts = 0;
+   * function unreliableOperation(): Result<string, Error> {
+   *   attempts++;
+   *   if (attempts < 3) {
+   *     return result.error(new Error(`Attempt ${attempts} failed`));
+   *   }
+   *   return result.ok("Success!");
+   * }
+   *
+   * const retryResult = result.retry(unreliableOperation, 5);
+   * if (retryResult.is_ok()) {
+   *   console.log(retryResult.value); // "Success!"
+   * } else {
+   *   console.log(`Failed after ${retryResult.error.errors.length} attempts`);
+   *   console.log(retryResult.error.message); // "Failed after 5 attempts."
+   * }
+   *
+   * // Network request example
+   * function fetchData(): Result<string, Error> {
+   *   // Simulated network request that might fail
+   *   return Math.random() > 0.7
+   *     ? result.ok("Data fetched successfully")
+   *     : result.error(new Error("Network timeout"));
+   * }
+   *
+   * const networkResult = result.retry(fetchData, 3);
+   * networkResult.match({
+   *   on_ok: (data) => console.log("Got data:", data),
+   *   on_error: (error) => console.log("All retries failed:", error.errors.map(e => e.message))
+   * });
+   *
+   * // Can be chained with other Result operations
+   * const processedResult = result.retry(fetchData, 3)
+   *   .map(data => data.toUpperCase())
+   *   .and_then(data => data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data")));
+   * ```
+   */
   retry: <ValueType, ErrorType extends Error>(
     fn: () => Result<ValueType, ErrorType>,
     retries: number,
@@ -616,14 +668,7 @@ const result = Object.freeze({
     for (let i = 0; i < retries; i++) {
       const result = fn();
       if (result.is_ok()) {
-        return result.map_err(
-          (error) =>
-            ({
-              name: "Result Retry Error",
-              message: `Failed after ${i + 1} attempts.`,
-              errors: [...errors, error],
-            }) as RetryError,
-        );
+        return result as unknown as Result<ValueType, RetryError>;
       } else if (result.is_error()) {
         errors.push(result.error);
       }
