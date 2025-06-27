@@ -314,6 +314,16 @@ interface Result<ResultType, ErrorType extends Error> {
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
+/**
+ * Error type returned by retry operations when all attempts fail.
+ * Contains the original error message, retry count, and all accumulated errors from failed attempts.
+ */
+interface RetryError<ErrorType extends Error = Error> extends Error {
+  name: "Result Retry Error";
+  message: `Failed after ${number} attempts.`;
+  errors: ErrorType[];
+}
+
 class ResultImpl<ResultType, ErrorType extends Error>
   implements Result<ResultType, ErrorType>
 {
@@ -654,31 +664,102 @@ const result = Object.freeze({
   retry: <ValueType, ErrorType extends Error>(
     fn: () => Result<ValueType, ErrorType>,
     retries: number,
-  ): Result<
-    ValueType,
-    { message: string; errors: ErrorType[]; name: string }
-  > => {
-    // RetryError type
-    type RetryError = {
-      name: "Result Retry Error";
-      message: `Failed after ${number} attempts.`;
-      errors: ErrorType[];
-    };
+  ): Result<ValueType, RetryError<ErrorType>> => {
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result = fn();
       if (result.is_ok()) {
-        return result as unknown as Result<ValueType, RetryError>;
+        return result as unknown as Result<ValueType, RetryError<ErrorType>>;
       } else if (result.is_error()) {
         errors.push(result.error);
       }
     }
-    return ResultImpl.error<ValueType, RetryError>({
+    return ResultImpl.error<ValueType, RetryError<ErrorType>>({
       message: `Failed after ${retries} attempts.`,
       name: "Result Retry Error",
       errors: errors,
-    } as RetryError);
+    } as RetryError<ErrorType>);
+  },
+
+  /**
+   * Executes an async function that returns a Promise<Result> multiple times until it succeeds or the retry limit is reached.
+   * If the function returns a Promise that resolves to an Ok Result, the retry operation stops and returns that successful Result.
+   * If the function returns a Promise that resolves to an Error Result, it's retried up to the specified number of times.
+   * If all retries fail, returns a Promise that resolves to an Error Result containing all the accumulated errors.
+   *
+   * @template ValueType - The type of the success value
+   * @template ErrorType - The type of the error (must extend Error)
+   * @param fn - Async function that returns a Promise<Result> and may be retried
+   * @param retries - Maximum number of attempts to make (0 means no attempts)
+   * @returns A Promise resolving to a Result containing either the successful value or a retry error with all accumulated errors
+   *
+   * @example
+   * ```typescript
+   * let attempts = 0;
+   * async function unreliableAsyncOperation(): Promise<Result<string, Error>> {
+   *   attempts++;
+   *   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async work
+   *   if (attempts < 3) {
+   *     return result.error(new Error(`Async attempt ${attempts} failed`));
+   *   }
+   *   return result.ok("Async success!");
+   * }
+   *
+   * const retryResult = await result.retry_async(unreliableAsyncOperation, 5);
+   * if (retryResult.is_ok()) {
+   *   console.log(retryResult.value); // "Async success!"
+   * } else {
+   *   console.log(`Failed after ${retryResult.error.errors.length} attempts`);
+   *   console.log(retryResult.error.message); // "Failed after 5 attempts."
+   * }
+   *
+   * // Network request example
+   * async function fetchDataAsync(): Promise<Result<string, Error>> {
+   *   try {
+   *     const response = await fetch('/api/data');
+   *     if (!response.ok) {
+   *       return result.error(new Error(`HTTP ${response.status}`));
+   *     }
+   *     const data = await response.text();
+   *     return result.ok(data);
+   *   } catch (error) {
+   *     return result.error(new Error('Network error'));
+   *   }
+   * }
+   *
+   * const networkResult = await result.retry_async(fetchDataAsync, 3);
+   * networkResult.match({
+   *   on_ok: (data) => console.log("Got data:", data),
+   *   on_error: (error) => console.log("All retries failed:", error.errors.map(e => e.message))
+   * });
+   *
+   * // Can be chained with other Result operations
+   * const processedResult = await result.retry_async(fetchDataAsync, 3)
+   *   .then(res => res.map(data => data.toUpperCase()))
+   *   .then(res => res.and_then(data => 
+   *     data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data"))
+   *   ));
+   * ```
+   */
+  retry_async: async <ValueType, ErrorType extends Error>(
+    fn: () => Promise<Result<ValueType, ErrorType>>,
+    retries: number,
+  ): Promise<Result<ValueType, RetryError<ErrorType>>> => {
+    const errors: ErrorType[] = [];
+    for (let i = 0; i < retries; i++) {
+      const result_value = await fn();
+      if (result_value.is_ok()) {
+        return result_value as unknown as Result<ValueType, RetryError<ErrorType>>;
+      } else if (result_value.is_error()) {
+        errors.push(result_value.error);
+      }
+    }
+    return ResultImpl.error<ValueType, RetryError<ErrorType>>({
+      message: `Failed after ${retries} attempts.`,
+      name: "Result Retry Error",
+      errors: errors,
+    } as RetryError<ErrorType>);
   },
 });
 
-export { result, type Result };
+export { result, type Result, type RetryError };
