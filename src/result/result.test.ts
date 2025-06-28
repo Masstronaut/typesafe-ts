@@ -636,21 +636,25 @@ test("Result", async (t) => {
     });
 
     t.test("retries until success", () => {
-      let attempts = 0;
-      const eventualSuccessFn = (): Result<string, Error> => {
-        attempts++;
-        if (attempts < 3) {
-          return result.error(new Error(`Attempt ${attempts} failed`));
-        }
-        return result.ok(`success after ${attempts} attempts`);
-      };
+      // Run the test 20 times with different random values
+      for (let run = 1; run <= 20; run++) {
+        let attempts = 0;
+        const successOnAttempt = Math.floor(Math.random() * 100) + 1; // Random number between 1 and 100
+        const eventualSuccessFn = (): Result<string, Error> => {
+          attempts++;
+          if (attempts < successOnAttempt) {
+            return result.error(new Error(`Attempt ${attempts} failed`));
+          }
+          return result.ok(`success after ${attempts} attempts`);
+        };
 
-      const retryResult = result.retry(eventualSuccessFn, 5);
-      assert.ok(retryResult.is_ok());
-      if (retryResult.is_ok()) {
-        assert.strictEqual(retryResult.value, "success after 3 attempts");
+        const retryResult = result.retry(eventualSuccessFn, successOnAttempt);
+        assert.ok(retryResult.is_ok(), `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`);
+        if (retryResult.is_ok()) {
+          assert.strictEqual(retryResult.value, `success after ${successOnAttempt} attempts`, `Run ${run}: Incorrect success message`);
+        }
+        assert.strictEqual(attempts, successOnAttempt, `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`);
       }
-      assert.strictEqual(attempts, 3);
     });
 
     t.test("fails after exhausting all retries", () => {
@@ -859,22 +863,26 @@ test("Result", async (t) => {
     });
 
     t.test("retries until success", async () => {
-      let attempts = 0;
-      const eventualSuccessFn = async () => {
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
-        if (attempts < 3) {
-          return result.error(new Error(`Async attempt ${attempts} failed`));
-        }
-        return result.ok(`async success after ${attempts} attempts`);
-      };
+      // Run the test 20 times with different random values
+      for (let run = 1; run <= 20; run++) {
+        let attempts = 0;
+        const successOnAttempt = Math.floor(Math.random() * 100) + 1; // Random number between 1 and 100
+        const eventualSuccessFn = async () => {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1));
+          if (attempts < successOnAttempt) {
+            return result.error(new Error(`Async attempt ${attempts} failed`));
+          }
+          return result.ok(`async success after ${attempts} attempts`);
+        };
 
-      const retryResult = await result.retry_async(eventualSuccessFn, 5);
-      assert.ok(retryResult.is_ok());
-      if (retryResult.is_ok()) {
-        assert.strictEqual(retryResult.value, "async success after 3 attempts");
+        const retryResult = await result.retry_async(eventualSuccessFn, successOnAttempt);
+        assert.ok(retryResult.is_ok(), `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`);
+        if (retryResult.is_ok()) {
+          assert.strictEqual(retryResult.value, `async success after ${successOnAttempt} attempts`, `Run ${run}: Incorrect success message`);
+        }
+        assert.strictEqual(attempts, successOnAttempt, `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`);
       }
-      assert.strictEqual(attempts, 3);
     });
 
     t.test("fails after exhausting all retries", async () => {
