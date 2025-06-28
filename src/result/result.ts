@@ -324,6 +324,15 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
   errors: ErrorType[];
 }
 
+const zeroRetriesError = Symbol("Zero Retries Error");
+type ZeroRetriesError = typeof zeroRetriesError;
+
+type ZeroRetriesErrorMessage = "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
+
+type ValidRetryCount<T extends number> = T extends 0 
+  ? ZeroRetriesErrorMessage | ZeroRetriesError
+  : T;
+
 class ResultImpl<ResultType, ErrorType extends Error>
   implements Result<ResultType, ErrorType>
 {
@@ -661,10 +670,18 @@ const result = Object.freeze({
    *   .and_then(data => data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data")));
    * ```
    */
-  retry: <ValueType, ErrorType extends Error>(
+  retry: <ValueType, ErrorType extends Error, RetriesType extends number>(
     fn: () => Result<ValueType, ErrorType>,
-    retries: number,
+    retries: ValidRetryCount<RetriesType>,
   ): Result<ValueType, RetryError<ErrorType>> => {
+    if (typeof retries !== 'number' || retries <= 0) {
+      return ResultImpl.error<ValueType, RetryError<ErrorType>>({
+        message: `Failed after 0 attempts.`,
+        name: "Result Retry Error",
+        errors: [],
+      } as RetryError<ErrorType>);
+    }
+    
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result = fn();
@@ -741,10 +758,18 @@ const result = Object.freeze({
    *   ));
    * ```
    */
-  retry_async: async <ValueType, ErrorType extends Error>(
+  retry_async: async <ValueType, ErrorType extends Error, RetriesType extends number>(
     fn: () => Promise<Result<ValueType, ErrorType>>,
-    retries: number,
+    retries: ValidRetryCount<RetriesType>,
   ): Promise<Result<ValueType, RetryError<ErrorType>>> => {
+    if (typeof retries !== 'number' || retries <= 0) {
+      return Promise.resolve(ResultImpl.error<ValueType, RetryError<ErrorType>>({
+        message: `Failed after 0 attempts.`,
+        name: "Result Retry Error",
+        errors: [],
+      } as RetryError<ErrorType>));
+    }
+    
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result_value = await fn();

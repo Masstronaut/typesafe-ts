@@ -680,7 +680,26 @@ test("Result", async (t) => {
         return result.error(new Error("Always fails"));
       };
 
+      // @ts-expect-error - Testing zero retries should produce type error for literal 0
       const retryResult = result.retry(failFn, 0);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 0);
+      }
+      assert.strictEqual(attempts, 0);
+    });
+
+    t.test("handles zero retries from variable", () => {
+      let attempts = 0;
+      const failFn = (): Result<string, Error> => {
+        attempts++;
+        return result.error(new Error("Always fails"));
+      };
+
+      const zeroRetries: number = 0;
+      const retryResult = result.retry(failFn, zeroRetries);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
@@ -887,7 +906,27 @@ test("Result", async (t) => {
         return result.error(new Error("Always fails"));
       };
 
+      // @ts-expect-error - Testing zero retries should produce type error for literal 0
       const retryResult = await result.retry_async(failFn, 0);
+      assert.ok(retryResult.is_error());
+      if (retryResult.is_error()) {
+        assert.strictEqual(retryResult.error.name, "Result Retry Error");
+        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(retryResult.error.errors.length, 0);
+      }
+      assert.strictEqual(attempts, 0);
+    });
+
+    t.test("handles zero retries from variable", async () => {
+      let attempts = 0;
+      const failFn = async () => {
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1));
+        return result.error(new Error("Always fails"));
+      };
+
+      const zeroRetries: number = 0;
+      const retryResult = await result.retry_async(failFn, zeroRetries);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
