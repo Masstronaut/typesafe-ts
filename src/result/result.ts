@@ -620,12 +620,12 @@ const result = Object.freeze({
   },
 
   /**
-   * Executes a function that returns a Result multiple times until it succeeds or the retry limit is reached.
+   * Retries a result-returning function until it succeeds or has failed for all of the requested retries.
    * If the function returns an Ok Result, the retry operation stops and returns that successful Result.
    * If the function returns an Error Result, it's retried up to the specified number of times.
    * If all retries fail, returns an Error Result containing all the accumulated errors.
    *
-   * @template ValueType - The type of the success value
+   * @template ValueType - The type of the ok (success) value
    * @template ErrorType - The type of the error (must extend Error)
    * @param fn - Function that returns a Result and may be retried
    * @param retries - Maximum number of attempts to make (0 means no attempts)
@@ -645,9 +645,6 @@ const result = Object.freeze({
    * const retryResult = result.retry(unreliableOperation, 5);
    * if (retryResult.is_ok()) {
    *   console.log(retryResult.value); // "Success!"
-   * } else {
-   *   console.log(`Failed after ${retryResult.error.errors.length} attempts`);
-   *   console.log(retryResult.error.message); // "Failed after 5 attempts."
    * }
    *
    * // Network request example
@@ -699,7 +696,7 @@ const result = Object.freeze({
   },
 
   /**
-   * Executes an async function that returns a Promise<Result> multiple times until it succeeds or the retry limit is reached.
+   * Retries a Promise<Result> returning function until it succeeds or has failed for all of the requested retries.
    * If the function returns a Promise that resolves to an Ok Result, the retry operation stops and returns that successful Result.
    * If the function returns a Promise that resolves to an Error Result, it's retried up to the specified number of times.
    * If all retries fail, returns a Promise that resolves to an Error Result containing all the accumulated errors.
@@ -725,23 +722,18 @@ const result = Object.freeze({
    * const retryResult = await result.retry_async(unreliableAsyncOperation, 5);
    * if (retryResult.is_ok()) {
    *   console.log(retryResult.value); // "Async success!"
-   * } else {
-   *   console.log(`Failed after ${retryResult.error.errors.length} attempts`);
-   *   console.log(retryResult.error.message); // "Failed after 5 attempts."
    * }
    *
    * // Network request example
    * async function fetchDataAsync(): Promise<Result<string, Error>> {
-   *   try {
+   *   return result.of_async(async () => {
    *     const response = await fetch('/api/data');
    *     if (!response.ok) {
-   *       return result.error(new Error(`HTTP ${response.status}`));
+   *       throw new Error(`HTTP ${response.status}`);
    *     }
    *     const data = await response.text();
    *     return result.ok(data);
-   *   } catch (error) {
-   *     return result.error(new Error('Network error'));
-   *   }
+   *   })
    * }
    *
    * const networkResult = await result.retry_async(fetchDataAsync, 3);
