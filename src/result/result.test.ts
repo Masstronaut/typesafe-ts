@@ -56,6 +56,75 @@ test("Result", async (t) => {
         assert.fail("Result should be Error");
       }
     });
+
+    t.test("is_ok() narrows correctly in else branch", () => {
+      const error = new Error("Test error");
+      const errorResult = result.error<string, Error>(error);
+      
+      if (errorResult.is_ok()) {
+        assert.fail("Result should not be Ok");
+      } else {
+        // In the else branch, TypeScript should know this is an ErrorResult
+        assert.strictEqual(errorResult.error, error);
+        assert.strictEqual(errorResult.error.message, "Test error");
+      }
+    });
+
+    t.test("is_error() narrows correctly in else branch", () => {
+      const value = "Hello World";
+      const okResult = result.ok<string, Error>(value);
+      
+      if (okResult.is_error()) {
+        assert.fail("Result should not be Error");
+      } else {
+        // In the else branch, TypeScript should know this is an OkResult
+        assert.strictEqual(okResult.value, value);
+        assert.strictEqual(okResult.value.length, 11);
+      }
+    });
+
+    t.test("discriminated union works with complex branching", () => {
+      const testResults: Result<number, Error>[] = [
+        result.ok(42),
+        result.error(new Error("Failed")),
+        result.ok(0),
+        result.error(new Error("Another failure"))
+      ];
+
+      const values: number[] = [];
+      const errors: Error[] = [];
+
+      for (const res of testResults) {
+        if (res.is_ok()) {
+          // TypeScript knows res.value exists here
+          values.push(res.value);
+        } else {
+          // TypeScript knows res.error exists here
+          errors.push(res.error);
+        }
+      }
+
+      assert.deepStrictEqual(values, [42, 0]);
+      assert.strictEqual(errors.length, 2);
+      assert.strictEqual(errors[0]?.message, "Failed");
+      assert.strictEqual(errors[1]?.message, "Another failure");
+    });
+
+    t.test("discriminated union preserves type information through chaining", () => {
+      const maybeNumber = result.ok<number, Error>(5);
+      
+      const processed = maybeNumber
+        .map(x => x * 2)
+        .and_then(x => x > 8 ? result.ok(x.toString()) : result.error(new Error("Too small")));
+
+      if (processed.is_ok()) {
+        // TypeScript knows this is string
+        assert.strictEqual(processed.value, "10");
+        assert.strictEqual(processed.value.length, 2);
+      } else {
+        assert.fail("Should have been Ok");
+      }
+    });
   });
 
   t.test("Value/Error Access", async (t) => {
