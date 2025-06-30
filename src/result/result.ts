@@ -13,7 +13,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  * This interface is used for type narrowing after calling `is_error()`.
  */
 interface ErrorResult<ErrorType extends Error> {
-  error: ErrorType;
+  readonly error: ErrorType;
 }
 
 /**
@@ -21,7 +21,7 @@ interface ErrorResult<ErrorType extends Error> {
  * This interface is used for type narrowing after calling `is_ok()`.
  */
 interface OkResult<ResultType> {
-  value: ResultType;
+  readonly value: ResultType;
 }
 
 /**
@@ -53,7 +53,10 @@ interface OkResult<ResultType> {
  * }
  * ```
  */
-interface Result<ResultType, ErrorType extends Error> {
+/**
+ * Common methods available on all Result instances.
+ */
+interface ResultMethods<ResultType, ErrorType extends Error> {
   /**
    * Returns the string tag for Object.prototype.toString calls.
    * Always returns "Result" for Result instances.
@@ -311,6 +314,10 @@ interface Result<ResultType, ErrorType extends Error> {
   [Symbol.iterator](): Generator<ResultType, void, unknown>;
 }
 
+type Result<ResultType, ErrorType extends Error> =
+  | (ResultMethods<ResultType, ErrorType> & OkResult<ResultType>)
+  | (ResultMethods<ResultType, ErrorType> & ErrorResult<ErrorType>);
+
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
@@ -327,15 +334,15 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
 const zeroRetriesError = Symbol("Zero Retries Error");
 type ZeroRetriesError = typeof zeroRetriesError;
 
-type ZeroRetriesErrorMessage = "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
+type ZeroRetriesErrorMessage =
+  "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
 
-type ValidRetryCount<T extends number> = T extends 0 
+type ValidRetryCount<T extends number> = T extends 0
   ? ZeroRetriesErrorMessage | ZeroRetriesError
   : T;
 
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements Result<ResultType, ErrorType>
-{
+  implements ResultMethods<ResultType, ErrorType> {
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -433,12 +440,18 @@ class ResultImpl<ResultType, ErrorType extends Error>
   static ok<ResultType, ErrorType extends Error = Error>(
     value: ResultType,
   ): Result<ResultType, ErrorType> {
-    return new ResultImpl<ResultType, ErrorType>({ ok: value });
+    return new ResultImpl<ResultType, ErrorType>({ ok: value }) as Result<
+      ResultType,
+      ErrorType
+    >;
   }
   static error<ResultType, ErrorType extends Error = Error>(
     error: ErrorType,
   ): Result<ResultType, ErrorType> {
-    return new ResultImpl<ResultType, ErrorType>({ error });
+    return new ResultImpl<ResultType, ErrorType>({ error }) as Result<
+      ResultType,
+      ErrorType
+    >;
   }
 }
 
@@ -671,14 +684,14 @@ const result = Object.freeze({
     fn: () => Result<ValueType, ErrorType>,
     retries: ValidRetryCount<RetriesType>,
   ): Result<ValueType, RetryError<ErrorType>> => {
-    if (typeof retries !== 'number' || retries <= 0) {
+    if (typeof retries !== "number" || retries <= 0) {
       return ResultImpl.error<ValueType, RetryError<ErrorType>>({
         message: `Failed after 0 attempts.`,
         name: "Result Retry Error",
         errors: [],
       } as RetryError<ErrorType>);
     }
-    
+
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result = fn();
@@ -745,28 +758,37 @@ const result = Object.freeze({
    * // Can be chained with other Result operations
    * const processedResult = await result.retry_async(fetchDataAsync, 3)
    *   .then(res => res.map(data => data.toUpperCase()))
-   *   .then(res => res.and_then(data => 
+   *   .then(res => res.and_then(data =>
    *     data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data"))
    *   ));
    * ```
    */
-  retry_async: async <ValueType, ErrorType extends Error, RetriesType extends number>(
+  retry_async: async <
+    ValueType,
+    ErrorType extends Error,
+    RetriesType extends number,
+  >(
     fn: () => Promise<Result<ValueType, ErrorType>>,
     retries: ValidRetryCount<RetriesType>,
   ): Promise<Result<ValueType, RetryError<ErrorType>>> => {
-    if (typeof retries !== 'number' || retries <= 0) {
-      return Promise.resolve(ResultImpl.error<ValueType, RetryError<ErrorType>>({
-        message: `Failed after 0 attempts.`,
-        name: "Result Retry Error",
-        errors: [],
-      } as RetryError<ErrorType>));
+    if (typeof retries !== "number" || retries <= 0) {
+      return Promise.resolve(
+        ResultImpl.error<ValueType, RetryError<ErrorType>>({
+          message: `Failed after 0 attempts.`,
+          name: "Result Retry Error",
+          errors: [],
+        } as RetryError<ErrorType>),
+      );
     }
-    
+
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result_value = await fn();
       if (result_value.is_ok()) {
-        return result_value as unknown as Result<ValueType, RetryError<ErrorType>>;
+        return result_value as unknown as Result<
+          ValueType,
+          RetryError<ErrorType>
+        >;
       } else if (result_value.is_error()) {
         errors.push(result_value.error);
       }
