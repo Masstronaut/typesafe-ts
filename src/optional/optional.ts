@@ -133,28 +133,28 @@ export interface Optional<ValueType> {
    * Returns a generator that yields the contained value if this Optional has a value.
    * If this Optional is empty, the generator yields nothing (completes immediately).
    * This allows for easy iteration over present values in for-of loops and other iterator contexts.
-   * 
+   *
    * @returns A generator that yields the value if present, otherwise yields nothing
-   * 
+   *
    * @example
    * ```typescript
    * const someValue = optional.some(42);
    * for (const value of someValue) {
    *   console.log(value); // 42
    * }
-   * 
+   *
    * const emptyValue = optional.none<number>();
    * for (const value of emptyValue) {
    *   console.log("This won't execute");
    * }
-   * 
+   *
    * // Useful for collecting present values from multiple optionals
    * const optionals = [
    *   optional.some(1),
    *   optional.none<number>(),
    *   optional.some(3)
    * ];
-   * 
+   *
    * const values = [];
    * for (const opt of optionals) {
    *   for (const value of opt) {
@@ -270,6 +270,84 @@ Object.freeze(OptionalImpl);
 export const optional = {
   some: OptionalImpl.some,
   none: OptionalImpl.none,
+
+  /**
+   * Executes a function and wraps the result in an Optional type.
+   * If the function returns null or undefined, returns a none Optional.
+   * Otherwise, returns a some Optional with the return value.
+   *
+   * @template T - The return type of the function (excluding null/undefined)
+   * @param fn - A function that may return null or undefined
+   * @returns An Optional containing either the function's return value or none
+   *
+   * @example
+   * ```typescript
+   * // Working with a function that might return null
+   * function findUser(id: string): User | null {
+   *   return users.find(u => u.id === id) || null;
+   * }
+   *
+   * const userResult = optional.from(() => findUser("123"));
+   * if (userResult.is_some()) {
+   *   console.log(userResult.value.name);
+   * }
+   *
+   * // Converting existing nullable APIs
+   * const element = optional.from(() => document.getElementById('myId'));
+   * const parsed = optional.from(() => {
+   *   const result = parseInt(userInput);
+   *   return isNaN(result) ? null : result;
+   * });
+   * ```
+   */
+  from: <T>(fn: () => T | null | undefined): Optional<NonNullable<T>> => {
+    const result = fn();
+    if (result === null || result === undefined) {
+      return OptionalImpl.none();
+    }
+    return OptionalImpl.some(result);
+  },
+
+  /**
+   * Executes an async function and wraps the result in a Promise<Optional>.
+   * If the function resolves to null or undefined, returns a none Optional.
+   * Otherwise, returns a some Optional with the resolved value.
+   *
+   * @template T - The resolved type of the async function (excluding null/undefined)
+   * @param fn - An async function that may resolve to null or undefined
+   * @returns A Promise resolving to an Optional containing either the resolved value or none
+   *
+   * @example
+   * ```typescript
+   * // Working with async functions that might return null
+   * async function fetchUser(id: string): Promise<User | null> {
+   *   const response = await fetch(`/api/users/${id}`);
+   *   return response.ok ? response.json() : null;
+   * }
+   *
+   * const userResult = await optional.from_async(() => fetchUser("123"));
+   * if (userResult.is_some()) {
+   *   console.log(userResult.value.name);
+   * } else {
+   *   console.log("User not found");
+   * }
+   *
+   * // Converting Promise-based APIs that might return null
+   * const userData = await optional.from_async(async () => {
+   *   const response = await fetch('/api/data');
+   *   return response.ok ? await response.json() : null;
+   * });
+   * ```
+   */
+  from_async: async <T>(
+    fn: () => Promise<T | null | undefined>,
+  ): Promise<Optional<NonNullable<T>>> => {
+    const result = await fn();
+    if (result === null || result === undefined) {
+      return OptionalImpl.none();
+    }
+    return OptionalImpl.some(result);
+  },
 };
 Object.freeze(optional);
 export default optional;
