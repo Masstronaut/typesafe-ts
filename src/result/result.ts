@@ -314,7 +314,7 @@ interface ResultMethods<ResultType, ErrorType extends Error> {
   [Symbol.iterator](): Generator<ResultType, void, unknown>;
 }
 
-type Result<ResultType, ErrorType extends Error> = 
+type Result<ResultType, ErrorType extends Error> =
   | (ResultMethods<ResultType, ErrorType> & OkResult<ResultType>)
   | (ResultMethods<ResultType, ErrorType> & ErrorResult<ErrorType>);
 
@@ -440,12 +440,18 @@ class ResultImpl<ResultType, ErrorType extends Error>
   static ok<ResultType, ErrorType extends Error = Error>(
     value: ResultType,
   ): Result<ResultType, ErrorType> {
-    return new ResultImpl<ResultType, ErrorType>({ ok: value }) as Result<ResultType, ErrorType>;
+    return new ResultImpl<ResultType, ErrorType>({ ok: value }) as Result<
+      ResultType,
+      ErrorType
+    >;
   }
   static error<ResultType, ErrorType extends Error = Error>(
     error: ErrorType,
   ): Result<ResultType, ErrorType> {
-    return new ResultImpl<ResultType, ErrorType>({ error }) as Result<ResultType, ErrorType>;
+    return new ResultImpl<ResultType, ErrorType>({ error }) as Result<
+      ResultType,
+      ErrorType
+    >;
   }
 }
 
