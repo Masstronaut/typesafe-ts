@@ -558,26 +558,26 @@ const result = Object.freeze({
    *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
    * }
    *
-   * const validResult = result.of(() => parseJSON('{"name": "John"}'));
+   * const validResult = result.from(() => parseJSON('{"name": "John"}'));
    * if (validResult.is_ok()) {
    *   console.log(validResult.value.name); // "John"
    * }
    *
-   * const invalidResult = result.of(() => parseJSON('invalid json'));
+   * const invalidResult = result.from(() => parseJSON('invalid json'));
    * if (invalidResult.is_error()) {
    *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
    * }
    *
    * // Converting existing throwing APIs
-   * const fileContent = result.of(() => fs.readFileSync('file.txt', 'utf8'));
-   * const parsedNumber = result.of(() => {
+   * const fileContent = result.from(() => fs.readFileSync('file.txt', 'utf8'));
+   * const parsedNumber = result.from(() => {
    *   const num = parseInt(userInput);
    *   if (isNaN(num)) throw new Error("Not a valid number");
    *   return num;
    * });
    * ```
    */
-  of: <T>(fn: () => T): Result<T, Error> => {
+  from: <T>(fn: () => T): Result<T, Error> => {
     try {
       return ResultImpl.ok(fn());
     } catch (error) {
@@ -605,7 +605,7 @@ const result = Object.freeze({
    *   return response.json();
    * }
    *
-   * const userResult = await result.of_async(() => fetchUserData("123"));
+   * const userResult = await result.from_async(() => fetchUserData("123"));
    * if (userResult.is_ok()) {
    *   console.log(userResult.value.name);
    * } else {
@@ -613,15 +613,15 @@ const result = Object.freeze({
    * }
    *
    * // Converting Promise-based APIs
-   * const fileContent = await result.of_async(() => fs.promises.readFile('file.txt', 'utf8'));
-   * const apiData = await result.of_async(async () => {
+   * const fileContent = await result.from_async(() => fs.promises.readFile('file.txt', 'utf8'));
+   * const apiData = await result.from_async(async () => {
    *   const response = await fetch('/api/data');
    *   if (!response.ok) throw new Error('API request failed');
    *   return response.json();
    * });
    * ```
    */
-  of_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
+  from_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
     try {
       const value = await fn();
       return ResultImpl.ok(value);
