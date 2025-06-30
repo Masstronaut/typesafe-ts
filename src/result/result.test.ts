@@ -433,9 +433,9 @@ test("Result", async (t) => {
   });
 
   t.test("Function Wrapping API", async (t) => {
-    t.test("result.of() wraps successful function execution", () => {
+    t.test("result.from() wraps successful function execution", () => {
       const successFn = () => "success";
-      const res = result.of(successFn);
+      const res = result.from(successFn);
 
       assert.ok(res.is_ok());
       if (res.is_ok()) {
@@ -443,11 +443,11 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of() wraps function that throws Error", () => {
+    t.test("result.from() wraps function that throws Error", () => {
       const throwingFn = () => {
         throw new Error("Test error");
       };
-      const res = result.of(throwingFn);
+      const res = result.from(throwingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -456,11 +456,11 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of() wraps function that throws non-Error value", () => {
+    t.test("result.from() wraps function that throws non-Error value", () => {
       const throwingFn = () => {
         throw "string error";
       };
-      const res = result.of(throwingFn);
+      const res = result.from(throwingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -469,32 +469,32 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of() works with different return types", () => {
-      const numberResult = result.of(() => 42);
+    t.test("result.from() works with different return types", () => {
+      const numberResult = result.from(() => 42);
       assert.ok(numberResult.is_ok());
       if (numberResult.is_ok()) {
         assert.strictEqual(numberResult.value, 42);
       }
 
-      const objectResult = result.of(() => ({ name: "test" }));
+      const objectResult = result.from(() => ({ name: "test" }));
       assert.ok(objectResult.is_ok());
       if (objectResult.is_ok()) {
         assert.deepStrictEqual(objectResult.value, { name: "test" });
       }
 
-      const nullResult = result.of(() => null);
+      const nullResult = result.from(() => null);
       assert.ok(nullResult.is_ok());
       if (nullResult.is_ok()) {
         assert.strictEqual(nullResult.value, null);
       }
     });
 
-    t.test("result.of() preserves Error types", () => {
+    t.test("result.from() preserves Error types", () => {
       const customError = new TypeError("Custom type error");
       const throwingFn = () => {
         throw customError;
       };
-      const res = result.of(throwingFn);
+      const res = result.from(throwingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -503,9 +503,9 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of_async() wraps successful async function", async () => {
+    t.test("result.from_async() wraps successful async function", async () => {
       const asyncSuccessFn = async () => "async success";
-      const res = await result.of_async(asyncSuccessFn);
+      const res = await result.from_async(asyncSuccessFn);
 
       assert.ok(res.is_ok());
       if (res.is_ok()) {
@@ -514,12 +514,12 @@ test("Result", async (t) => {
     });
 
     t.test(
-      "result.of_async() wraps async function that rejects with Error",
+      "result.from_async() wraps async function that rejects with Error",
       async () => {
         const asyncThrowingFn = async () => {
           throw new Error("Async error");
         };
-        const res = await result.of_async(asyncThrowingFn);
+        const res = await result.from_async(asyncThrowingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -530,12 +530,12 @@ test("Result", async (t) => {
     );
 
     t.test(
-      "result.of_async() wraps async function that rejects with non-Error",
+      "result.from_async() wraps async function that rejects with non-Error",
       async () => {
         const asyncThrowingFn = async () => {
           throw "async string error";
         };
-        const res = await result.of_async(asyncThrowingFn);
+        const res = await result.from_async(asyncThrowingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -546,15 +546,15 @@ test("Result", async (t) => {
     );
 
     t.test(
-      "result.of_async() works with different resolved types",
+      "result.from_async() works with different resolved types",
       async () => {
-        const numberResult = await result.of_async(async () => 42);
+        const numberResult = await result.from_async(async () => 42);
         assert.ok(numberResult.is_ok());
         if (numberResult.is_ok()) {
           assert.strictEqual(numberResult.value, 42);
         }
 
-        const arrayResult = await result.of_async(async () => [1, 2, 3]);
+        const arrayResult = await result.from_async(async () => [1, 2, 3]);
         assert.ok(arrayResult.is_ok());
         if (arrayResult.is_ok()) {
           assert.deepStrictEqual(arrayResult.value, [1, 2, 3]);
@@ -562,12 +562,12 @@ test("Result", async (t) => {
       },
     );
 
-    t.test("result.of_async() preserves async Error types", async () => {
+    t.test("result.from_async() preserves async Error types", async () => {
       const customError = new RangeError("Custom range error");
       const asyncThrowingFn = async () => {
         throw customError;
       };
-      const res = await result.of_async(asyncThrowingFn);
+      const res = await result.from_async(asyncThrowingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -576,14 +576,14 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.of_async() properly awaits async operations", async () => {
+    t.test("result.from_async() properly awaits async operations", async () => {
       let counter = 0;
       const asyncFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return ++counter;
       };
 
-      const res = await result.of_async(asyncFn);
+      const res = await result.from_async(asyncFn);
       assert.ok(res.is_ok());
       if (res.is_ok()) {
         assert.strictEqual(res.value, 1);
@@ -592,23 +592,23 @@ test("Result", async (t) => {
     });
 
     t.test(
-      "result.of() and result.of_async() work with JSON parsing example",
+      "result.from() and result.of_async() work with JSON parsing example",
       async () => {
         // Sync JSON parsing
-        const validJson = result.of(() => JSON.parse('{"name": "John"}'));
+        const validJson = result.from(() => JSON.parse('{"name": "John"}'));
         assert.ok(validJson.is_ok());
         if (validJson.is_ok()) {
           assert.strictEqual(validJson.value.name, "John");
         }
 
-        const invalidJson = result.of(() => JSON.parse("invalid json"));
+        const invalidJson = result.from(() => JSON.parse("invalid json"));
         assert.ok(invalidJson.is_error());
         if (invalidJson.is_error()) {
           assert.ok(invalidJson.error instanceof SyntaxError);
         }
 
         // Async version
-        const asyncValidJson = await result.of_async(async () =>
+        const asyncValidJson = await result.from_async(async () =>
           JSON.parse('{"age": 30}'),
         );
         assert.ok(asyncValidJson.is_ok());
@@ -649,11 +649,22 @@ test("Result", async (t) => {
         };
 
         const retryResult = result.retry(eventualSuccessFn, successOnAttempt);
-        assert.ok(retryResult.is_ok(), `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`);
+        assert.ok(
+          retryResult.is_ok(),
+          `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`,
+        );
         if (retryResult.is_ok()) {
-          assert.strictEqual(retryResult.value, `success after ${successOnAttempt} attempts`, `Run ${run}: Incorrect success message`);
+          assert.strictEqual(
+            retryResult.value,
+            `success after ${successOnAttempt} attempts`,
+            `Run ${run}: Incorrect success message`,
+          );
         }
-        assert.strictEqual(attempts, successOnAttempt, `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`);
+        assert.strictEqual(
+          attempts,
+          successOnAttempt,
+          `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`,
+        );
       }
     });
 
@@ -668,11 +679,23 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 3 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 3 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 3);
-        assert.strictEqual(retryResult.error.errors[0]?.message, "Attempt 1 failed");
-        assert.strictEqual(retryResult.error.errors[1]?.message, "Attempt 2 failed");
-        assert.strictEqual(retryResult.error.errors[2]?.message, "Attempt 3 failed");
+        assert.strictEqual(
+          retryResult.error.errors[0]?.message,
+          "Attempt 1 failed",
+        );
+        assert.strictEqual(
+          retryResult.error.errors[1]?.message,
+          "Attempt 2 failed",
+        );
+        assert.strictEqual(
+          retryResult.error.errors[2]?.message,
+          "Attempt 3 failed",
+        );
       }
       assert.strictEqual(attempts, 3);
     });
@@ -689,7 +712,10 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 0 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 0);
       }
       assert.strictEqual(attempts, 0);
@@ -707,7 +733,10 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 0 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 0);
       }
       assert.strictEqual(attempts, 0);
@@ -727,9 +756,15 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 1 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 1 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 1);
-        assert.strictEqual(retryResult.error.errors[0]?.message, "First attempt failed");
+        assert.strictEqual(
+          retryResult.error.errors[0]?.message,
+          "First attempt failed",
+        );
       }
       assert.strictEqual(attempts, 1);
     });
@@ -742,7 +777,8 @@ test("Result", async (t) => {
         assert.strictEqual(numberResult.value, 42);
       }
 
-      const objectFn = (): Result<{ name: string }, Error> => result.ok({ name: "test" });
+      const objectFn = (): Result<{ name: string }, Error> =>
+        result.ok({ name: "test" });
       const objectResult = result.retry(objectFn, 1);
       assert.ok(objectResult.is_ok());
       if (objectResult.is_ok()) {
@@ -770,19 +806,30 @@ test("Result", async (t) => {
       let attempts = 0;
       const customErrorFn = (): Result<string, CustomError> => {
         attempts++;
-        return result.error<string, CustomError>(new CustomError(`Custom error ${attempts}`, 500 + attempts));
+        return result.error<string, CustomError>(
+          new CustomError(`Custom error ${attempts}`, 500 + attempts),
+        );
       };
 
       const retryResult = result.retry(customErrorFn, 2);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 2 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 2 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 2);
         assert.ok(retryResult.error.errors[0] instanceof CustomError);
         assert.ok(retryResult.error.errors[1] instanceof CustomError);
-        assert.strictEqual((retryResult.error.errors[0] as CustomError).code, 501);
-        assert.strictEqual((retryResult.error.errors[1] as CustomError).code, 502);
+        assert.strictEqual(
+          (retryResult.error.errors[0] as CustomError).code,
+          501,
+        );
+        assert.strictEqual(
+          (retryResult.error.errors[1] as CustomError).code,
+          502,
+        );
       }
     });
 
@@ -790,10 +837,10 @@ test("Result", async (t) => {
       const errors = [
         new Error("First error"),
         new TypeError("Second error"),
-        new RangeError("Third error")
+        new RangeError("Third error"),
       ];
       let attempts = 0;
-      
+
       const multiErrorFn = (): Result<string, Error> => {
         const error = errors[attempts];
         attempts++;
@@ -824,8 +871,10 @@ test("Result", async (t) => {
       };
 
       const retryResult = result.retry(eventualSuccessFn, 3);
-      const mappedResult = retryResult.map((value: unknown) => (value as number) * 2);
-      
+      const mappedResult = retryResult.map(
+        (value: unknown) => (value as number) * 2,
+      );
+
       assert.ok(mappedResult.is_ok());
       if (mappedResult.is_ok()) {
         assert.strictEqual(mappedResult.value, 20);
@@ -834,14 +883,18 @@ test("Result", async (t) => {
 
     t.test("retry error can be handled with match", () => {
       const alwaysFailFn = () => result.error(new Error("Always fails"));
-      
+
       const retryResult = result.retry(alwaysFailFn, 2);
       const matchResult = retryResult.match({
         on_ok: (value) => `Success: ${value}`,
-        on_error: (error) => `Failed with ${error.errors.length} errors: ${error.message}`
+        on_error: (error) =>
+          `Failed with ${error.errors.length} errors: ${error.message}`,
       });
 
-      assert.strictEqual(matchResult, "Failed with 2 errors: Failed after 2 attempts.");
+      assert.strictEqual(
+        matchResult,
+        "Failed with 2 errors: Failed after 2 attempts.",
+      );
     });
   });
 
@@ -850,7 +903,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const successFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.ok(`async success after ${attempts} attempts`);
       };
 
@@ -869,19 +922,33 @@ test("Result", async (t) => {
         const successOnAttempt = Math.floor(Math.random() * 100) + 1; // Random number between 1 and 100
         const eventualSuccessFn = async () => {
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 1));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           if (attempts < successOnAttempt) {
             return result.error(new Error(`Async attempt ${attempts} failed`));
           }
           return result.ok(`async success after ${attempts} attempts`);
         };
 
-        const retryResult = await result.retry_async(eventualSuccessFn, successOnAttempt);
-        assert.ok(retryResult.is_ok(), `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`);
+        const retryResult = await result.retry_async(
+          eventualSuccessFn,
+          successOnAttempt,
+        );
+        assert.ok(
+          retryResult.is_ok(),
+          `Run ${run}: Expected success but got error after ${attempts} attempts (target: ${successOnAttempt})`,
+        );
         if (retryResult.is_ok()) {
-          assert.strictEqual(retryResult.value, `async success after ${successOnAttempt} attempts`, `Run ${run}: Incorrect success message`);
+          assert.strictEqual(
+            retryResult.value,
+            `async success after ${successOnAttempt} attempts`,
+            `Run ${run}: Incorrect success message`,
+          );
         }
-        assert.strictEqual(attempts, successOnAttempt, `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`);
+        assert.strictEqual(
+          attempts,
+          successOnAttempt,
+          `Run ${run}: Expected ${successOnAttempt} attempts but got ${attempts}`,
+        );
       }
     });
 
@@ -889,7 +956,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const alwaysFailFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.error(new Error(`Async attempt ${attempts} failed`));
       };
 
@@ -897,11 +964,23 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 3 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 3 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 3);
-        assert.strictEqual(retryResult.error.errors[0]?.message, "Async attempt 1 failed");
-        assert.strictEqual(retryResult.error.errors[1]?.message, "Async attempt 2 failed");
-        assert.strictEqual(retryResult.error.errors[2]?.message, "Async attempt 3 failed");
+        assert.strictEqual(
+          retryResult.error.errors[0]?.message,
+          "Async attempt 1 failed",
+        );
+        assert.strictEqual(
+          retryResult.error.errors[1]?.message,
+          "Async attempt 2 failed",
+        );
+        assert.strictEqual(
+          retryResult.error.errors[2]?.message,
+          "Async attempt 3 failed",
+        );
       }
       assert.strictEqual(attempts, 3);
     });
@@ -910,7 +989,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const failFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.error(new Error("Always fails"));
       };
 
@@ -919,7 +998,10 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 0 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 0);
       }
       assert.strictEqual(attempts, 0);
@@ -929,7 +1011,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const failFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.error(new Error("Always fails"));
       };
 
@@ -938,7 +1020,10 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 0 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 0 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 0);
       }
       assert.strictEqual(attempts, 0);
@@ -948,7 +1033,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const failOnceFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         if (attempts === 1) {
           return result.error(new Error("First async attempt failed"));
         }
@@ -959,16 +1044,22 @@ test("Result", async (t) => {
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 1 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 1 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 1);
-        assert.strictEqual(retryResult.error.errors[0]?.message, "First async attempt failed");
+        assert.strictEqual(
+          retryResult.error.errors[0]?.message,
+          "First async attempt failed",
+        );
       }
       assert.strictEqual(attempts, 1);
     });
 
     t.test("works with different value types", async () => {
       const numberFn = async () => {
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.ok(42);
       };
       const numberResult = await result.retry_async(numberFn, 1);
@@ -978,7 +1069,7 @@ test("Result", async (t) => {
       }
 
       const objectFn = async () => {
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.ok({ name: "async test" });
       };
       const objectResult = await result.retry_async(objectFn, 1);
@@ -988,7 +1079,7 @@ test("Result", async (t) => {
       }
 
       const nullFn = async () => {
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.ok(null);
       };
       const nullResult = await result.retry_async(nullFn, 1);
@@ -1009,22 +1100,38 @@ test("Result", async (t) => {
       }
 
       let attempts = 0;
-      const customErrorFn = async (): Promise<Result<string, CustomAsyncError>> => {
+      const customErrorFn = async (): Promise<
+        Result<string, CustomAsyncError>
+      > => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
-        return result.error<string, CustomAsyncError>(new CustomAsyncError(`Custom async error ${attempts}`, 400 + attempts));
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        return result.error<string, CustomAsyncError>(
+          new CustomAsyncError(
+            `Custom async error ${attempts}`,
+            400 + attempts,
+          ),
+        );
       };
 
       const retryResult = await result.retry_async(customErrorFn, 2);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
         assert.strictEqual(retryResult.error.name, "Result Retry Error");
-        assert.strictEqual(retryResult.error.message, "Failed after 2 attempts.");
+        assert.strictEqual(
+          retryResult.error.message,
+          "Failed after 2 attempts.",
+        );
         assert.strictEqual(retryResult.error.errors.length, 2);
         assert.ok(retryResult.error.errors[0] instanceof CustomAsyncError);
         assert.ok(retryResult.error.errors[1] instanceof CustomAsyncError);
-        assert.strictEqual((retryResult.error.errors[0] as CustomAsyncError).statusCode, 401);
-        assert.strictEqual((retryResult.error.errors[1] as CustomAsyncError).statusCode, 402);
+        assert.strictEqual(
+          (retryResult.error.errors[0] as CustomAsyncError).statusCode,
+          401,
+        );
+        assert.strictEqual(
+          (retryResult.error.errors[1] as CustomAsyncError).statusCode,
+          402,
+        );
       }
     });
 
@@ -1032,14 +1139,14 @@ test("Result", async (t) => {
       const errors = [
         new Error("First async error"),
         new TypeError("Second async error"),
-        new RangeError("Third async error")
+        new RangeError("Third async error"),
       ];
       let attempts = 0;
-      
+
       const multiErrorFn = async () => {
         const error = errors[attempts];
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.error(error!);
       };
 
@@ -1060,7 +1167,7 @@ test("Result", async (t) => {
       let attempts = 0;
       const eventualSuccessFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         if (attempts < 2) {
           return result.error(new Error(`Async attempt ${attempts} failed`));
         }
@@ -1068,8 +1175,10 @@ test("Result", async (t) => {
       };
 
       const retryResult = await result.retry_async(eventualSuccessFn, 3);
-      const mappedResult = retryResult.map((value: unknown) => (value as number) * 2);
-      
+      const mappedResult = retryResult.map(
+        (value: unknown) => (value as number) * 2,
+      );
+
       assert.ok(mappedResult.is_ok());
       if (mappedResult.is_ok()) {
         assert.strictEqual(mappedResult.value, 20);
@@ -1078,24 +1187,28 @@ test("Result", async (t) => {
 
     t.test("retry async error can be handled with match", async () => {
       const alwaysFailFn = async () => {
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         return result.error(new Error("Always fails"));
       };
-      
+
       const retryResult = await result.retry_async(alwaysFailFn, 2);
       const matchResult = retryResult.match({
         on_ok: (value) => `Success: ${value}`,
-        on_error: (error) => `Failed with ${error.errors.length} async errors: ${error.message}`
+        on_error: (error) =>
+          `Failed with ${error.errors.length} async errors: ${error.message}`,
       });
 
-      assert.strictEqual(matchResult, "Failed with 2 async errors: Failed after 2 attempts.");
+      assert.strictEqual(
+        matchResult,
+        "Failed with 2 async errors: Failed after 2 attempts.",
+      );
     });
 
     t.test("handles promise rejections gracefully", async () => {
       let attempts = 0;
       const rejectingFn = async () => {
         attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
         if (attempts === 1) {
           throw new Error("Promise rejected");
         }
@@ -1119,7 +1232,7 @@ test("Result", async (t) => {
       const orderTrackingFn = async () => {
         attempts++;
         executionOrder.push(attempts);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         executionOrder.push(attempts + 10);
         if (attempts < 2) {
           return result.error(new Error(`Attempt ${attempts} failed`));
@@ -1138,25 +1251,29 @@ test("Result", async (t) => {
 
       const fn1 = async () => {
         attempts1++;
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
         if (attempts1 < 2) {
-          return result.error(new Error(`Function 1 attempt ${attempts1} failed`));
+          return result.error(
+            new Error(`Function 1 attempt ${attempts1} failed`),
+          );
         }
         return result.ok("Function 1 success");
       };
 
       const fn2 = async () => {
         attempts2++;
-        await new Promise(resolve => setTimeout(resolve, 3));
+        await new Promise((resolve) => setTimeout(resolve, 3));
         if (attempts2 < 3) {
-          return result.error(new Error(`Function 2 attempt ${attempts2} failed`));
+          return result.error(
+            new Error(`Function 2 attempt ${attempts2} failed`),
+          );
         }
         return result.ok("Function 2 success");
       };
 
       const [result1, result2] = await Promise.all([
         result.retry_async(fn1, 3),
-        result.retry_async(fn2, 4)
+        result.retry_async(fn2, 4),
       ]);
 
       assert.ok(result1.is_ok());

@@ -327,15 +327,15 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
 const zeroRetriesError = Symbol("Zero Retries Error");
 type ZeroRetriesError = typeof zeroRetriesError;
 
-type ZeroRetriesErrorMessage = "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
+type ZeroRetriesErrorMessage =
+  "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
 
-type ValidRetryCount<T extends number> = T extends 0 
+type ValidRetryCount<T extends number> = T extends 0
   ? ZeroRetriesErrorMessage | ZeroRetriesError
   : T;
 
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements Result<ResultType, ErrorType>
-{
+  implements Result<ResultType, ErrorType> {
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -545,26 +545,26 @@ const result = Object.freeze({
    *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
    * }
    *
-   * const validResult = result.of(() => parseJSON('{"name": "John"}'));
+   * const validResult = result.from(() => parseJSON('{"name": "John"}'));
    * if (validResult.is_ok()) {
    *   console.log(validResult.value.name); // "John"
    * }
    *
-   * const invalidResult = result.of(() => parseJSON('invalid json'));
+   * const invalidResult = result.from(() => parseJSON('invalid json'));
    * if (invalidResult.is_error()) {
    *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
    * }
    *
    * // Converting existing throwing APIs
-   * const fileContent = result.of(() => fs.readFileSync('file.txt', 'utf8'));
-   * const parsedNumber = result.of(() => {
+   * const fileContent = result.from(() => fs.readFileSync('file.txt', 'utf8'));
+   * const parsedNumber = result.from(() => {
    *   const num = parseInt(userInput);
    *   if (isNaN(num)) throw new Error("Not a valid number");
    *   return num;
    * });
    * ```
    */
-  of: <T>(fn: () => T): Result<T, Error> => {
+  from: <T>(fn: () => T): Result<T, Error> => {
     try {
       return ResultImpl.ok(fn());
     } catch (error) {
@@ -592,7 +592,7 @@ const result = Object.freeze({
    *   return response.json();
    * }
    *
-   * const userResult = await result.of_async(() => fetchUserData("123"));
+   * const userResult = await result.from_async(() => fetchUserData("123"));
    * if (userResult.is_ok()) {
    *   console.log(userResult.value.name);
    * } else {
@@ -600,15 +600,15 @@ const result = Object.freeze({
    * }
    *
    * // Converting Promise-based APIs
-   * const fileContent = await result.of_async(() => fs.promises.readFile('file.txt', 'utf8'));
-   * const apiData = await result.of_async(async () => {
+   * const fileContent = await result.from_async(() => fs.promises.readFile('file.txt', 'utf8'));
+   * const apiData = await result.from_async(async () => {
    *   const response = await fetch('/api/data');
    *   if (!response.ok) throw new Error('API request failed');
    *   return response.json();
    * });
    * ```
    */
-  of_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
+  from_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
     try {
       const value = await fn();
       return ResultImpl.ok(value);
@@ -671,14 +671,14 @@ const result = Object.freeze({
     fn: () => Result<ValueType, ErrorType>,
     retries: ValidRetryCount<RetriesType>,
   ): Result<ValueType, RetryError<ErrorType>> => {
-    if (typeof retries !== 'number' || retries <= 0) {
+    if (typeof retries !== "number" || retries <= 0) {
       return ResultImpl.error<ValueType, RetryError<ErrorType>>({
         message: `Failed after 0 attempts.`,
         name: "Result Retry Error",
         errors: [],
       } as RetryError<ErrorType>);
     }
-    
+
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result = fn();
@@ -745,28 +745,37 @@ const result = Object.freeze({
    * // Can be chained with other Result operations
    * const processedResult = await result.retry_async(fetchDataAsync, 3)
    *   .then(res => res.map(data => data.toUpperCase()))
-   *   .then(res => res.and_then(data => 
+   *   .then(res => res.and_then(data =>
    *     data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data"))
    *   ));
    * ```
    */
-  retry_async: async <ValueType, ErrorType extends Error, RetriesType extends number>(
+  retry_async: async <
+    ValueType,
+    ErrorType extends Error,
+    RetriesType extends number,
+  >(
     fn: () => Promise<Result<ValueType, ErrorType>>,
     retries: ValidRetryCount<RetriesType>,
   ): Promise<Result<ValueType, RetryError<ErrorType>>> => {
-    if (typeof retries !== 'number' || retries <= 0) {
-      return Promise.resolve(ResultImpl.error<ValueType, RetryError<ErrorType>>({
-        message: `Failed after 0 attempts.`,
-        name: "Result Retry Error",
-        errors: [],
-      } as RetryError<ErrorType>));
+    if (typeof retries !== "number" || retries <= 0) {
+      return Promise.resolve(
+        ResultImpl.error<ValueType, RetryError<ErrorType>>({
+          message: `Failed after 0 attempts.`,
+          name: "Result Retry Error",
+          errors: [],
+        } as RetryError<ErrorType>),
+      );
     }
-    
+
     const errors: ErrorType[] = [];
     for (let i = 0; i < retries; i++) {
       const result_value = await fn();
       if (result_value.is_ok()) {
-        return result_value as unknown as Result<ValueType, RetryError<ErrorType>>;
+        return result_value as unknown as Result<
+          ValueType,
+          RetryError<ErrorType>
+        >;
       } else if (result_value.is_error()) {
         errors.push(result_value.error);
       }
