@@ -194,3 +194,301 @@ computation.match({
 ```
 
 Similar to the version using exceptions, each step of the operation will only be run if the previous step succeeded. `Result`'s `.and_then()` method encapsulates the error check and only runs the provided function if a value is present. This made it possible to implement the `calculateExpression` using `Result` in 12 lines of code, whereas before it required 30 lines.
+
+# Static Enforcement
+
+To help teams consistently adopt `Result` patterns and avoid mixing exception-based and Result-based error handling, this package includes an ESLint rule that enforces Result usage throughout your codebase.
+
+## ESLint Rule Overview
+
+The `enforce-result-usage` rule automatically detects and flags:
+
+- **Throw statements** - suggests using `result.error()` instead
+- **Try/catch blocks** - suggests using `result.from()` or `result.from_async()` instead  
+- **Calls to throwing functions** - suggests wrapping with `result.from()` or `result.from_async()`
+
+The rule provides automatic fixes for most violations, making migration to Result patterns straightforward.
+
+## Installation and Setup
+
+### ESLint Flat Config Setup
+
+Add the rule to your ESLint flat configuration:
+
+```js eslint.config.js
+import { enforceResultUsage } from './src/result/eslint-rule.js';
+
+export default [
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: {
+      'custom-result': {
+        rules: {
+          'enforce-result-usage': enforceResultUsage,
+        },
+      },
+    },
+    rules: {
+      'custom-result/enforce-result-usage': 'error',
+    },
+  },
+];
+```
+
+### Legacy ESLint Config Setup
+
+For legacy `.eslintrc` configurations:
+
+```json .eslintrc.json
+{
+  "plugins": ["custom-result"],
+  "rules": {
+    "custom-result/enforce-result-usage": "error"
+  }
+}
+```
+
+## Rule Configuration
+
+The rule accepts several options to customize its behavior:
+
+```js eslint.config.js
+export default [
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: {
+      'custom-result': {
+        rules: {
+          'enforce-result-usage': enforceResultUsage,
+        },
+      },
+    },
+    rules: {
+      'custom-result/enforce-result-usage': ['error', {
+        allowExceptions: ['validateInput', 'debug*', 'test*'],
+        allowTestFiles: true,
+        autoFix: true
+      }],
+    },
+  },
+];
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `allowExceptions` | `string[]` | `[]` | Function names or patterns to exclude from the rule. Supports wildcards with `*` |
+| `allowTestFiles` | `boolean` | `true` | Allow throw/try-catch in test files (detected by `.test.`, `.spec.`, `test/`, `tests/`, `__tests__` patterns) |
+| `autoFix` | `boolean` | `true` | Enable automatic fixes for violations |
+
+#### Exception Patterns
+
+The `allowExceptions` option supports both exact matches and wildcard patterns:
+
+```js
+{
+  allowExceptions: [
+    'validateInput',     // Exact function name
+    'debug*',           // Any function starting with 'debug'
+    '*Test',            // Any function ending with 'Test'
+    'legacy*Helper*'    // Any function containing 'legacy' and 'Helper'
+  ]
+}
+```
+
+## Violation Examples and Fixes
+
+### Throw Statements
+
+**❌ Flagged Code:**
+```ts
+function parseNumber(str: string): number {
+  if (isNaN(Number(str))) {
+    throw new Error(`Invalid number: ${str}`);
+  }
+  return Number(str);
+}
+```
+
+**✅ Auto-fixed Code:**
+```ts
+function parseNumber(str: string): Result<number, Error> {
+  if (isNaN(Number(str))) {
+    return result.error(new Error(`Invalid number: ${str}`));
+  }
+  return result.ok(Number(str));
+}
+```
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+
+### Try/Catch Blocks
+
+**❌ Flagged Code:**
+```ts
+function readConfig(): ConfigData | null {
+  try {
+    const data = fs.readFileSync('config.json', 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Failed to read config:', error);
+    return null;
+  }
+}
+```
+
+**✅ Auto-fixed Code:**
+```ts
+function readConfig(): Result<ConfigData, Error> {
+  const result = result.from(() => {
+    const data = fs.readFileSync('config.json', 'utf8');
+    return JSON.parse(data);
+  });
+  
+  return result.map_err(error => {
+    console.error('Failed to read config:', error);
+    return error;
+  });
+}
+```
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+
+### Async Try/Catch Blocks
+
+**❌ Flagged Code:**
+```ts
+async function fetchUserData(id: string): Promise<UserData | null> {
+  try {
+    const response = await fetch(`/api/users/${id}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    return null;
+  }
+}
+```
+
+**✅ Auto-fixed Code:**
+```ts
+async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
+  const result = await result.from_async(async () => {
+    const response = await fetch(`/api/users/${id}`);
+    return await response.json();
+  });
+  
+  return result.map_err(error => {
+    console.error('Failed to fetch user:', error);
+    return error;
+  });
+}
+```
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+
+### Function Calls That May Throw
+
+**❌ Flagged Code:**
+```ts
+function processData(jsonString: string): ProcessedData {
+  const data = JSON.parse(jsonString);  // May throw
+  return transformData(data);
+}
+```
+
+**✅ Auto-fixed Code:**
+```ts
+function processData(jsonString: string): Result<ProcessedData, Error> {
+  return result.from(() => JSON.parse(jsonString))
+    .map(data => transformData(data));
+}
+```
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+
+### Async Function Calls
+
+**❌ Flagged Code:**
+```ts
+async function uploadFile(file: File): Promise<UploadResult> {
+  const response = await fetch('/upload', {  // May throw
+    method: 'POST',
+    body: file
+  });
+  return response.json();
+}
+```
+
+**✅ Auto-fixed Code:**
+```ts
+async function uploadFile(file: File): Promise<Result<UploadResult, Error>> {
+  return await result.from_async(async () => {
+    const response = await fetch('/upload', {
+      method: 'POST',
+      body: file
+    });
+    return response.json();
+  });
+}
+```
+
+## Message Types
+
+The rule provides four different violation messages:
+
+| Message ID | Description | Triggered By |
+|------------|-------------|--------------|
+| `noThrowStatement` | Use `result.error()` instead of throw statements | `throw` statements |
+| `noTryCatchBlock` | Use `result.from()` or `result.from_async()` instead of try/catch | `try/catch` blocks |
+| `useResultFrom` | Wrap throwing function calls with `result.from()` | Calls to functions that may throw |
+| `useResultFromAsync` | Wrap async throwing functions with `result.from_async()` | Calls to async functions that may throw |
+
+## Integration with Development Workflow
+
+### Running the Rule
+
+```bash
+# Check for violations
+npx eslint src/
+
+# Auto-fix violations
+npx eslint src/ --fix
+
+# Check specific files
+npx eslint src/my-file.ts --fix
+```
+
+### CI/CD Integration
+
+Add the rule to your CI pipeline to ensure Result patterns are consistently followed:
+
+```yaml .github/workflows/ci.yml
+- name: Lint with Result enforcement
+  run: |
+    npm run lint
+    # Ensure no Result violations in production code
+    npx eslint src/ --max-warnings 0
+```
+
+### Gradual Migration
+
+For existing codebases, you can gradually adopt Result patterns:
+
+1. **Start with warnings:** Set the rule to `warn` initially
+2. **Use allowExceptions:** Exclude legacy functions during migration
+3. **Enable autoFix:** Let the rule automatically convert simple cases
+4. **Manual review:** Review auto-fixed code for correctness
+5. **Strict enforcement:** Switch to `error` once migration is complete
+
+```js
+// Gradual migration configuration
+rules: {
+  'custom-result/enforce-result-usage': ['warn', {
+    allowExceptions: ['legacy*', 'old*'],
+    autoFix: true
+  }]
+}
+```
+
+The static enforcement rule helps maintain consistency across your codebase, making it easier for teams to adopt Result patterns and avoid the pitfalls of mixed error handling approaches.
