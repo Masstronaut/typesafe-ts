@@ -29,6 +29,32 @@ const ruleTester = new RuleTester({
 ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
   valid: [
     {
+      name: "void functions are valid",
+      code: `function doSomething(): void {
+        console.log("Doing something");
+      }`,
+    },
+    {
+      name: "void functions with return statements are valid",
+      code: `function doSomething(): void {
+        console.log("Doing something");
+        return;
+      }`,
+    },
+    {
+      name: "void functions with no explicit return type are valid",
+      code: `function doSomething() {
+        console.log("Doing something");
+      }`,
+    },
+    {
+      name: "void functions with a return statement and no explicit return type are valid",
+      code: `function doSomething() {
+        console.log("Doing something");
+        return;
+      }`,
+    },
+    {
       name: "Functions returning Optional are valid",
       code: `function findUser(id: string): Optional<User> {
         return optional.some(user);
@@ -80,6 +106,25 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       name: "Variables with Optional type are valid",
       code: `const user: Optional<User> = optional.some(userData);`,
     },
+    {
+      name: "Exception functions without wildcards are allowed",
+      code: `function exactName(): string | null {
+        return null;
+      }`,
+      options: [{ allowExceptions: ["exactName"] }],
+    },
+    {
+      name: "Logical expressions that don't return nullable values are valid",
+      code: `function test() {
+        return condition && "value";
+      }`,
+    },
+    {
+      name: "Logical expressions with only non-nullable values are valid",
+      code: `function test() {
+        return getValue() || "default";
+      }`,
+    },
   ],
 
   invalid: [
@@ -103,6 +148,39 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
         {
           messageId: "noNullableReturn",
           data: { type: "T" },
+        },
+      ],
+    },
+    {
+      name: "Function returning undefined without a return type annotation",
+      code: `function returnUndefined() { return undefined; }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+    {
+      name: "Function returning nullable value without a return type annotation",
+      code: `function returnNullable() { 
+        return Math.random() > 0.5 ? null : "value";
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+    },
+    {
+      name: "Function returning possibly undefined value without a return type annotation",
+      code: `function returnNullable() { 
+        return Math.random() > 0.5 ? undefined : { foo: "bar" };
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
         },
       ],
     },
@@ -370,6 +448,192 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
         },
       ],
       output: `const result = optional.from(() => find(item => item.id === 'test'));`,
+    },
+
+    {
+      name: "Logical AND expression returning nullable value",
+      code: `function test() {
+        return condition && null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Logical OR expression with nullable fallback",
+      code: `function test() {
+        return getValue() || null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Complex logical expression with undefined",
+      code: `function test() {
+        return (x && y) || undefined;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Logical expression type inference from string literal with null",
+      code: `function test() {
+        return condition ? "value" : null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+    },
+
+    {
+      name: "Logical OR expression with string literal and null",
+      code: `function test() {
+        return "default" || null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+    },
+
+    {
+      name: "Nested logical expressions with null",
+      code: `function test() {
+        return (condition1 || condition2) && null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Function with nested function should only analyze outer returns",
+      code: `function outer() {
+        function inner() {
+          return "inner value";
+        }
+        return null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Type inference from number literal with null",
+      code: `function test() {
+        return Math.random() > 0.5 ? 42 : null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "number" },
+        },
+      ],
+    },
+
+    {
+      name: "Type inference from boolean literal with undefined",
+      code: `function test() {
+        return condition ? true : undefined;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "boolean" },
+        },
+      ],
+    },
+
+    {
+      name: "Variable with standalone undefined type",
+      code: `let value: undefined;`,
+      errors: [
+        {
+          messageId: "noNullableUnion",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Conditional with nullable consequent only",
+      code: `function test() {
+        return condition ? null : "value";
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+    },
+
+    {
+      name: "Union with undefined in type annotation",
+      code: `function getValue(): string | undefined {
+        return undefined;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+    },
+
+    {
+      name: "Complex type reference that falls back to T",
+      code: `function getComplexType(): (string & object) | null {
+        return null;
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+    },
+
+    {
+      name: "Mixed return patterns (void + value) should be flagged",
+      code: `function mixedReturns(condition: boolean) {
+        if (condition) {
+          return "value";
+        }
+        return; // naked return mixed with value return
+      }`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
     },
   ],
 });

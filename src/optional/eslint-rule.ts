@@ -133,6 +133,250 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       });
     }
 
+    function hasNullableReturnStatements(
+      functionNode: 
+        | TSESTree.FunctionDeclaration
+        | TSESTree.FunctionExpression  
+        | TSESTree.ArrowFunctionExpression
+    ): boolean {
+      const returnStatements: TSESTree.ReturnStatement[] = [];
+      
+      // Collect all return statements in the function
+      function collectReturns(node: TSESTree.Node): void {
+        if (node.type === 'ReturnStatement') {
+          returnStatements.push(node);
+          return; // Don't traverse into nested functions
+        }
+        
+        // Don't traverse into nested functions
+        if (node.type === 'FunctionDeclaration' || 
+            node.type === 'FunctionExpression' || 
+            node.type === 'ArrowFunctionExpression') {
+          return;
+        }
+        
+        // Use ESLint's visitor pattern for type-safe traversal
+        switch (node.type) {
+          case 'BlockStatement':
+            node.body.forEach(collectReturns);
+            break;
+          case 'IfStatement':
+            collectReturns(node.consequent);
+            if (node.alternate) collectReturns(node.alternate);
+            break;
+          case 'WhileStatement':
+          case 'DoWhileStatement':
+          case 'ForStatement':
+          case 'ForInStatement':
+          case 'ForOfStatement':
+            collectReturns(node.body);
+            break;
+          case 'SwitchStatement':
+            node.cases.forEach(collectReturns);
+            break;
+          case 'SwitchCase':
+            node.consequent.forEach(collectReturns);
+            break;
+          case 'TryStatement':
+            collectReturns(node.block);
+            if (node.handler) collectReturns(node.handler);
+            if (node.finalizer) collectReturns(node.finalizer);
+            break;
+          case 'CatchClause':
+            collectReturns(node.body);
+            break;
+          case 'ExpressionStatement':
+            // Expression statements don't contain return statements
+            break;
+          default:
+            // For other node types, check if they have common properties
+            if ('body' in node && Array.isArray(node.body)) {
+              node.body.forEach((child: TSESTree.Node) => collectReturns(child));
+            } else if ('body' in node && node.body) {
+              collectReturns(node.body as TSESTree.Node);
+            }
+        }
+      }
+      
+      // Start traversal from function body
+      if (functionNode.body) {
+        collectReturns(functionNode.body);
+      }
+      
+      // Analyze return patterns to distinguish void functions from value-returning functions
+      if (returnStatements.length === 0) {
+        return false; // No returns, effectively void
+      }
+      
+      const nakedReturns = returnStatements.filter(stmt => !stmt.argument);
+      const valueReturns = returnStatements.filter(stmt => stmt.argument);
+      
+      // If ALL returns are naked returns, treat as void function
+      if (nakedReturns.length > 0 && valueReturns.length === 0) {
+        return false; // Pure void function pattern
+      }
+      
+      // For functions with value returns, check for nullable values
+      const hasNullableValueReturns = valueReturns.some(returnStmt => {
+        return containsNullableValue(returnStmt.argument);
+      });
+      
+      // Flag if there are nullable value returns OR mixed return patterns
+      return hasNullableValueReturns || (nakedReturns.length > 0 && valueReturns.length > 0);
+    }
+
+    function containsNullableValue(node: TSESTree.Expression | null | undefined): boolean {
+      if (!node) return false;
+      
+      // Check for literal null
+      if (node.type === 'Literal' && node.value === null) {
+        return true;
+      }
+      
+      // Check for undefined identifier
+      if (node.type === 'Identifier' && node.name === 'undefined') {
+        return true;
+      }
+      
+      // Check for conditional expressions (ternary operator)
+      if (node.type === 'ConditionalExpression') {
+        return containsNullableValue(node.consequent) || containsNullableValue(node.alternate);
+      }
+      
+      // Check for logical expressions (&&, ||)
+      if (node.type === 'LogicalExpression') {
+        return containsNullableValue(node.left) || containsNullableValue(node.right);
+      }
+      
+      return false;
+    }
+
+    function inferNonNullableTypeFromReturns(
+      functionNode:
+        | TSESTree.FunctionDeclaration
+        | TSESTree.FunctionExpression
+        | TSESTree.ArrowFunctionExpression
+    ): string {
+      const returnStatements: TSESTree.ReturnStatement[] = [];
+      
+      // Collect all return statements (reuse the logic from hasNullableReturnStatements)
+      function collectReturns(node: TSESTree.Node): void {
+        if (node.type === 'ReturnStatement') {
+          returnStatements.push(node);
+          return;
+        }
+        
+        if (node.type === 'FunctionDeclaration' || 
+            node.type === 'FunctionExpression' || 
+            node.type === 'ArrowFunctionExpression') {
+          return;
+        }
+        
+        // Use ESLint's visitor pattern for type-safe traversal
+        switch (node.type) {
+          case 'BlockStatement':
+            node.body.forEach(collectReturns);
+            break;
+          case 'IfStatement':
+            collectReturns(node.consequent);
+            if (node.alternate) collectReturns(node.alternate);
+            break;
+          case 'WhileStatement':
+          case 'DoWhileStatement':
+          case 'ForStatement':
+          case 'ForInStatement':
+          case 'ForOfStatement':
+            collectReturns(node.body);
+            break;
+          case 'SwitchStatement':
+            node.cases.forEach(collectReturns);
+            break;
+          case 'SwitchCase':
+            node.consequent.forEach(collectReturns);
+            break;
+          case 'TryStatement':
+            collectReturns(node.block);
+            if (node.handler) collectReturns(node.handler);
+            if (node.finalizer) collectReturns(node.finalizer);
+            break;
+          case 'CatchClause':
+            collectReturns(node.body);
+            break;
+          case 'ExpressionStatement':
+            // Expression statements don't contain return statements
+            break;
+          default:
+            // For other node types, check if they have common properties
+            if ('body' in node && Array.isArray(node.body)) {
+              node.body.forEach((child: TSESTree.Node) => collectReturns(child));
+            } else if ('body' in node && node.body) {
+              collectReturns(node.body as TSESTree.Node);
+            }
+        }
+      }
+      
+      if (functionNode.body) {
+        collectReturns(functionNode.body);
+      }
+      
+      // Try to infer the non-nullable type from return statements
+      for (const returnStmt of returnStatements) {
+        if (!returnStmt.argument) continue;
+        
+        const nonNullableType = extractNonNullableType(returnStmt.argument);
+        if (nonNullableType !== "T") {
+          return nonNullableType;
+        }
+      }
+      
+      return "T";
+    }
+
+    function extractNonNullableType(node: TSESTree.Expression | null | undefined): string {
+      if (!node) return "T";
+      
+      // Skip null and undefined
+      if ((node.type === 'Literal' && node.value === null) ||
+          (node.type === 'Identifier' && node.name === 'undefined')) {
+        return "T";
+      }
+      
+      // For literal strings
+      if (node.type === 'Literal' && typeof node.value === 'string') {
+        return "string";
+      }
+      
+      // For literal numbers
+      if (node.type === 'Literal' && typeof node.value === 'number') {
+        return "number";
+      }
+      
+      // For literal booleans
+      if (node.type === 'Literal' && typeof node.value === 'boolean') {
+        return "boolean";
+      }
+      
+      // For conditional expressions, try both branches
+      if (node.type === 'ConditionalExpression') {
+        const consequentType = extractNonNullableType(node.consequent);
+        if (consequentType !== "T") return consequentType;
+        
+        const alternateType = extractNonNullableType(node.alternate);
+        if (alternateType !== "T") return alternateType;
+      }
+      
+      // For logical expressions
+      if (node.type === 'LogicalExpression') {
+        const leftType = extractNonNullableType(node.left);
+        if (leftType !== "T") return leftType;
+        
+        const rightType = extractNonNullableType(node.right);
+        if (rightType !== "T") return rightType;
+      }
+      
+      return "T";
+    }
+
     return {
       // Check function return types (includes methods via FunctionExpression)
       "FunctionDeclaration, FunctionExpression, ArrowFunctionExpression"(
@@ -141,7 +385,13 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
           | TSESTree.FunctionExpression
           | TSESTree.ArrowFunctionExpression,
       ) {
-        if (!node.returnType || !isNullableUnion(node.returnType)) return;
+        // Check explicit return type annotations
+        const hasExplicitNullableReturn = node.returnType && isNullableUnion(node.returnType);
+        
+        // Check if function returns null/undefined without explicit annotation
+        const hasImplicitNullableReturn = !node.returnType && hasNullableReturnStatements(node);
+        
+        if (!hasExplicitNullableReturn && !hasImplicitNullableReturn) return;
 
         // Skip if this is a method function (handled by parent MethodDefinition selector)
         if (
@@ -160,10 +410,12 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
         if (isExceptionFunction(functionName)) return;
 
-        const baseType = getNonNullableType(node.returnType);
+        const baseType = node.returnType 
+          ? getNonNullableType(node.returnType) 
+          : inferNonNullableTypeFromReturns(node);
 
         context.report({
-          node: node.returnType,
+          node: node.returnType || node.id || node,
           messageId: "noNullableReturn" as const,
           data: { type: baseType },
           // Disable auto-fix for function return types as it requires

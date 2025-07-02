@@ -122,6 +122,13 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       name: "Instance method calls are not detected (limitation)",
       code: `weakMap.set(primitive, value);`, // Instance methods not detected
     },
+    {
+      name: "Exception functions without wildcards are allowed",
+      code: `function exactName() {
+        throw new Error("Exact match exception");
+      }`,
+      options: [{ allowExceptions: ["exactName"] }],
+    },
   ],
 
   invalid: [
@@ -440,6 +447,36 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       ],
       output: `function testHelper() {
         return result.error(new Error("Test error"));
+      }`,
+    },
+
+    {
+      name: "Throw with non-Error object should wrap in Error",
+      code: `function handleError() {
+        throw { message: "Custom error object" };
+      }`,
+      errors: [
+        {
+          messageId: "noThrowStatement",
+        },
+      ],
+      output: `function handleError() {
+        return result.error(new Error({ message: "Custom error object" }));
+      }`,
+    },
+
+    {
+      name: "Throw with number should wrap in Error",
+      code: `function handleError() {
+        throw 404;
+      }`,
+      errors: [
+        {
+          messageId: "noThrowStatement",
+        },
+      ],
+      output: `function handleError() {
+        return result.error(new Error(404));
       }`,
     },
   ],

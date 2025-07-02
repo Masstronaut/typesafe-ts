@@ -301,35 +301,97 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
           }
         };
 
-        // Simple traversal to detect await
-        const visited = new Set();
+        // Type-safe traversal to detect await
+        const visited = new Set<TSESTree.Node>();
         const traverse = (n: TSESTree.Node) => {
           if (visited.has(n)) return;
           visited.add(n);
 
           checkForAwait(n);
-          for (const key in n) {
-            if (key === "parent") continue; // Skip parent to avoid cycles
-            const value = (n as any)[key];
-            if (Array.isArray(value)) {
-              value.forEach((child) => {
-                if (
-                  child &&
-                  typeof child === "object" &&
-                  child.type &&
-                  !visited.has(child)
-                ) {
-                  traverse(child);
-                }
+          
+          // Use ESLint's visitor pattern for type-safe traversal
+          switch (n.type) {
+            case 'BlockStatement':
+              n.body.forEach(child => {
+                if (!visited.has(child)) traverse(child);
               });
-            } else if (
-              value &&
-              typeof value === "object" &&
-              value.type &&
-              !visited.has(value)
-            ) {
-              traverse(value);
-            }
+              break;
+            case 'IfStatement':
+              if (!visited.has(n.consequent)) traverse(n.consequent);
+              if (n.alternate && !visited.has(n.alternate)) traverse(n.alternate);
+              break;
+            case 'WhileStatement':
+            case 'DoWhileStatement':
+            case 'ForStatement':
+            case 'ForInStatement':
+            case 'ForOfStatement':
+              if (!visited.has(n.body)) traverse(n.body);
+              break;
+            case 'SwitchStatement':
+              n.cases.forEach(child => {
+                if (!visited.has(child)) traverse(child);
+              });
+              break;
+            case 'SwitchCase':
+              n.consequent.forEach(child => {
+                if (!visited.has(child)) traverse(child);
+              });
+              break;
+            case 'TryStatement':
+              if (!visited.has(n.block)) traverse(n.block);
+              if (n.handler && !visited.has(n.handler)) traverse(n.handler);
+              if (n.finalizer && !visited.has(n.finalizer)) traverse(n.finalizer);
+              break;
+            case 'CatchClause':
+              if (!visited.has(n.body)) traverse(n.body);
+              break;
+            case 'ExpressionStatement':
+              if (n.expression && !visited.has(n.expression)) traverse(n.expression);
+              break;
+            case 'AwaitExpression':
+              if (n.argument && !visited.has(n.argument)) traverse(n.argument);
+              break;
+            case 'CallExpression':
+              if (n.callee && !visited.has(n.callee)) traverse(n.callee);
+              n.arguments.forEach(arg => {
+                if (!visited.has(arg)) traverse(arg);
+              });
+              break;
+            case 'VariableDeclaration':
+              n.declarations.forEach(decl => {
+                if (!visited.has(decl)) traverse(decl);
+              });
+              break;
+            case 'VariableDeclarator':
+              if (n.init && !visited.has(n.init)) traverse(n.init);
+              break;
+            case 'ReturnStatement':
+              if (n.argument && !visited.has(n.argument)) traverse(n.argument);
+              break;
+            case 'AssignmentExpression':
+            case 'BinaryExpression':
+            case 'LogicalExpression':
+              if (n.left && !visited.has(n.left)) traverse(n.left);
+              if (n.right && !visited.has(n.right)) traverse(n.right);
+              break;
+            case 'ConditionalExpression':
+              if (n.test && !visited.has(n.test)) traverse(n.test);
+              if (n.consequent && !visited.has(n.consequent)) traverse(n.consequent);
+              if (n.alternate && !visited.has(n.alternate)) traverse(n.alternate);
+              break;
+            case 'MemberExpression':
+              if (n.object && !visited.has(n.object)) traverse(n.object);
+              if (n.computed && n.property && !visited.has(n.property)) traverse(n.property);
+              break;
+            default:
+              // For other node types, check if they have common properties
+              if ('body' in n && Array.isArray(n.body)) {
+                n.body.forEach((child: TSESTree.Node) => {
+                  if (!visited.has(child)) traverse(child);
+                });
+              } else if ('body' in n && n.body) {
+                if (!visited.has(n.body as TSESTree.Node)) traverse(n.body as TSESTree.Node);
+              }
           }
         };
 
