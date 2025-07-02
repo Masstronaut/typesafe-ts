@@ -34,6 +34,35 @@ test("Result", async (t) => {
         assert.strictEqual(undefinedOkResult.value, undefined);
       }
     });
+
+    t.test("constructor validates arguments defensively", () => {
+      const okResult = result.ok("test");
+      const ResultConstructor = (okResult as any).constructor;
+
+      assert.throws(
+        () => new ResultConstructor({ ok: "value", error: new Error("both") }),
+        {
+          name: "TypeError",
+          message: "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
+
+      assert.throws(
+        () => new ResultConstructor({}),
+        {
+          name: "TypeError", 
+          message: "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
+
+      assert.throws(
+        () => new ResultConstructor({ something: "else" }),
+        {
+          name: "TypeError",
+          message: "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
+    });
   });
 
   t.test("Type Predicates & Narrowing", async (t) => {
