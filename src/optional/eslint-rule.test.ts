@@ -67,6 +67,17 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       }`,
     },
     {
+      name: "Arrow functions with implicit non-nullable returns are valid",
+      code: `const getValue = () => "hello";
+      const getNumber = () => 42;
+      const getBoolean = () => true;`,
+    },
+    {
+      name: "Arrow functions with implicit Optional returns are valid",
+      code: `const getOptional = () => optional.some("value");
+      const getNone = () => optional.none();`,
+    },
+    {
       name: "Methods returning Optional are valid",
       code: `class UserService {
         findById(id: string): Optional<User> {
@@ -81,6 +92,13 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
     {
       name: "Using optional.from() for array.find is valid",
       code: `const item = optional.from(() => array.find(x => x.id === id));`,
+    },
+    {
+      name: "Result.match() calls with non-nullable returns should not trigger the rule",
+      code: `const message = someResult.match({
+        on_ok: (value) => \`Success: \${value}\`,
+        on_error: (error) => \`Error: \${error.message}\`
+      });`,
     },
     {
       name: "Exception functions are allowed",
@@ -199,6 +217,54 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
     },
 
     {
+      name: "Arrow function with implicit return of null",
+      code: `const getNull = () => null;`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+      // No auto-fix for function return types
+    },
+
+    {
+      name: "Arrow function with implicit return of undefined",
+      code: `const getUndefined = () => undefined;`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+      // No auto-fix for function return types
+    },
+
+    {
+      name: "Arrow function with implicit conditional return containing null",
+      code: `const getConditional = () => condition ? "value" : null;`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "string" },
+        },
+      ],
+      // No auto-fix for function return types
+    },
+
+    {
+      name: "Arrow function with implicit logical expression containing null",
+      code: `const getLogical = () => value || null;`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+      // No auto-fix for function return types
+    },
+
+    {
       name: "Function returning union with null and undefined",
       code: `function getValue(): number | null | undefined {
         return null;
@@ -305,6 +371,21 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
         },
       ],
       output: `const matches = optional.from(() => text.match(/pattern/));`,
+    },
+
+    {
+      name: "Result.match() calls with nullable returns should trigger the rule",
+      code: `const result = someResult.match({
+        on_ok: (value) => value,
+        on_error: (error) => null
+      });`,
+      errors: [
+        {
+          messageId: "noNullableReturn",
+          data: { type: "T" },
+        },
+      ],
+      // No auto-fix for function return types
     },
 
     {

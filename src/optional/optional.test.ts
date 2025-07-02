@@ -276,6 +276,8 @@ test("Optional", async (t) => {
     });
 
     t.test("works with functions that conditionally return null", () => {
+      // Need this fn to return null to test that optional.from() works correctly
+      // eslint-disable-next-line ts-utils/enforce-optional-usage
       function findItem(id: number): string | null {
         return id === 1 ? "found" : null;
       }
