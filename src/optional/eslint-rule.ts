@@ -21,7 +21,7 @@ type MessageIds = "noNullableReturn" | "useOptionalFrom" | "noNullableUnion";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) =>
-    `https://github.com/your-org/ts-utils/blob/main/docs/rules/${name}.md`,
+    `https://github.com/masstronaut/ts-utils/blob/main/docs/rules/${name}.md`,
 );
 
 /**
@@ -134,12 +134,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     }
 
     function isInsideOptionalFrom(node: TSESTree.Node): boolean {
-      if (undefined === node.parent) {
-        return false;
-      }
-      // Check if this function is inside an optional.from() or optional.from_async() call
-      let parent: TSESTree.Node = node.parent;
-      let foundOptionalFromCall = false;
+      let parent: TSESTree.Node = node.parent!;
 
       while (parent) {
         if (
@@ -151,18 +146,10 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
           (parent.callee.property.name === "from" ||
             parent.callee.property.name === "from_async")
         ) {
-          foundOptionalFromCall = true;
-        }
-
-        // If we found an optional.from call and we're still within its arguments,
-        // then this function is inside the optional.from context
-        if (foundOptionalFromCall) {
           return true;
         }
-        if (undefined === parent.parent) {
-          break;
-        }
-        parent = parent.parent;
+
+        parent = parent.parent!;
       }
       return false;
     }
