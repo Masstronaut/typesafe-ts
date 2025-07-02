@@ -94,6 +94,47 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const item = optional.from(() => array.find(x => x.id === id));`,
     },
     {
+      name: "Arrow functions returning null inside optional.from() are valid",
+      code: `const result = optional.from(() => condition ? "value" : null);`,
+    },
+    {
+      name: "Arrow functions returning undefined inside optional.from() are valid", 
+      code: `const result = optional.from(() => condition ? 42 : undefined);`,
+    },
+    {
+      name: "Complex arrow functions with nullable returns inside optional.from() are valid",
+      code: `const user = optional.from(() => {
+        const found = users.find(u => u.id === targetId);
+        return found ? found : null;
+      });`,
+    },
+    {
+      name: "Nested arrow functions with nullable returns inside optional.from() are valid",
+      code: `const data = optional.from(() => 
+        items.map(item => item.value).find(val => val > threshold) || null
+      );`,
+    },
+    {
+      name: "Arrow functions returning null inside optional.from_async() are valid",
+      code: `const result = await optional.from_async(async () => {
+        const response = await fetch('/api/data');
+        return response.ok ? await response.json() : null;
+      });`,
+    },
+    {
+      name: "Mock functions with nullable returns inside optional.from_async() context are valid",
+      code: `const result = await optional.from_async(async () => {
+        const mockFetch = async (url: string) => {
+          if (url === "/api/success") {
+            return { ok: true, json: async () => ({ data: "success" }) };
+          }
+          return { ok: false, json: async () => null };
+        };
+        const response = await mockFetch("/api/test");
+        return response.ok ? await response.json() : null;
+      });`,
+    },
+    {
       name: "Result.match() calls with non-nullable returns should not trigger the rule",
       code: `const message = someResult.match({
         on_ok: (value) => \`Success: \${value}\`,

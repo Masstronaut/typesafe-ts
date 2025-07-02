@@ -292,6 +292,7 @@ test("Optional", async (t) => {
 
     t.test("works with DOM-like APIs", () => {
       const mockDocument = {
+        // eslint-disable-next-line ts-utils/enforce-optional-usage
         getElementById: (id: string) => (id === "exists" ? { id } : null),
       };
 
@@ -371,10 +372,10 @@ test("Optional", async (t) => {
 
     t.test("works with fetch-like APIs", async () => {
       const mockFetch = async (url: string) => {
-        await new Promise((resolve) => setTimeout(resolve, 1));
         if (url === "/api/success") {
           return { ok: true, json: async () => ({ data: "success" }) };
         }
+        // eslint-disable-next-line ts-utils/enforce-optional-usage
         return { ok: false, json: async () => null };
       };
 

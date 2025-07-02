@@ -133,6 +133,40 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       });
     }
 
+    function isInsideOptionalFrom(node: TSESTree.Node): boolean {
+      if (undefined === node.parent) {
+        return false;
+      }
+      // Check if this function is inside an optional.from() or optional.from_async() call
+      let parent: TSESTree.Node = node.parent;
+      let foundOptionalFromCall = false;
+
+      while (parent) {
+        if (
+          parent.type === "CallExpression" &&
+          parent.callee.type === "MemberExpression" &&
+          parent.callee.object.type === "Identifier" &&
+          parent.callee.object.name === "optional" &&
+          parent.callee.property.type === "Identifier" &&
+          (parent.callee.property.name === "from" ||
+            parent.callee.property.name === "from_async")
+        ) {
+          foundOptionalFromCall = true;
+        }
+
+        // If we found an optional.from call and we're still within its arguments,
+        // then this function is inside the optional.from context
+        if (foundOptionalFromCall) {
+          return true;
+        }
+        if (undefined === parent.parent) {
+          break;
+        }
+        parent = parent.parent;
+      }
+      return false;
+    }
+
     // Helper to collect return statements using ESLint's visitor pattern
     function collectReturnStatements(
       functionNode:
@@ -189,9 +223,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         | TSESTree.ArrowFunctionExpression,
     ): boolean {
       // Special handling for arrow functions with implicit returns
-      if (functionNode.type === "ArrowFunctionExpression" && 
-          functionNode.body && 
-          functionNode.body.type !== "BlockStatement") {
+      if (
+        functionNode.type === "ArrowFunctionExpression" &&
+        functionNode.body &&
+        functionNode.body.type !== "BlockStatement"
+      ) {
         // Arrow function with implicit return - check the body directly
         return containsNullableValue(functionNode.body as TSESTree.Expression);
       }
@@ -263,11 +299,15 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         | TSESTree.ArrowFunctionExpression,
     ): string {
       // Special handling for arrow functions with implicit returns
-      if (functionNode.type === "ArrowFunctionExpression" && 
-          functionNode.body && 
-          functionNode.body.type !== "BlockStatement") {
+      if (
+        functionNode.type === "ArrowFunctionExpression" &&
+        functionNode.body &&
+        functionNode.body.type !== "BlockStatement"
+      ) {
         // Arrow function with implicit return - analyze the body directly
-        const nonNullableType = extractNonNullableType(functionNode.body as TSESTree.Expression);
+        const nonNullableType = extractNonNullableType(
+          functionNode.body as TSESTree.Expression,
+        );
         if (nonNullableType !== "T") {
           return nonNullableType;
         }
@@ -340,24 +380,25 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     // Helper function to detect String.prototype.match calls
     function isStringMatchCall(node: TSESTree.CallExpression): boolean {
       if (node.callee.type !== "MemberExpression") return false;
-      
+
       // String.match() typically takes a RegExp or string as first argument
       // This is a heuristic to identify string match vs other match methods
       if (node.arguments.length === 0) return false;
-      
+
       const firstArg = node.arguments[0];
       if (!firstArg) return false;
-      
+
       return (
         // RegExp literal: /pattern/
-        (firstArg.type === "Literal" && 'regex' in firstArg && firstArg.regex !== undefined)
-      ) || (
-        // String literal: "pattern" 
-        (firstArg.type === "Literal" && 'value' in firstArg && typeof firstArg.value === "string")
-      ) || (
+        (firstArg.type === "Literal" &&
+          "regex" in firstArg &&
+          firstArg.regex !== undefined) ||
+        // String literal: "pattern"
+        (firstArg.type === "Literal" &&
+          "value" in firstArg &&
+          typeof firstArg.value === "string") ||
         // Template literal: `pattern`
-        firstArg.type === "TemplateLiteral"
-      ) || (
+        firstArg.type === "TemplateLiteral" ||
         // Variable that might be a RegExp/string (less certain but common)
         firstArg.type === "Identifier"
       );
@@ -371,6 +412,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
           | TSESTree.FunctionExpression
           | TSESTree.ArrowFunctionExpression,
       ) {
+        // Skip if this function is inside an optional.from() or optional.from_async() call
+        if (isInsideOptionalFrom(node)) {
+          return;
+        }
+
         // Check explicit return type annotations
         const hasExplicitNullableReturn =
           node.returnType && isNullableUnion(node.returnType);
@@ -511,7 +557,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         // Special handling for 'match' - only flag String.prototype.match, not other match methods
         const isMatchCall = functionName === "match";
         const isStringMatch = isMatchCall && isStringMatchCall(node);
-        
+
         if (nullableAPIs.includes(functionName) || isStringMatch) {
           context.report({
             node,
