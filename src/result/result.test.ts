@@ -37,31 +37,31 @@ test("Result", async (t) => {
 
     t.test("constructor validates arguments defensively", () => {
       const okResult = result.ok("test");
+      // Since the ResultImpl is not part of the public interface,
+      // we are doing some funny business to access the constructor and test invariants.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ResultConstructor = (okResult as any).constructor;
 
       assert.throws(
         () => new ResultConstructor({ ok: "value", error: new Error("both") }),
         {
           name: "TypeError",
-          message: "Result must be constructed with either an 'ok' or 'error' property.",
+          message:
+            "Result must be constructed with either an 'ok' or 'error' property.",
         },
       );
 
-      assert.throws(
-        () => new ResultConstructor({}),
-        {
-          name: "TypeError", 
-          message: "Result must be constructed with either an 'ok' or 'error' property.",
-        },
-      );
+      assert.throws(() => new ResultConstructor({}), {
+        name: "TypeError",
+        message:
+          "Result must be constructed with either an 'ok' or 'error' property.",
+      });
 
-      assert.throws(
-        () => new ResultConstructor({ something: "else" }),
-        {
-          name: "TypeError",
-          message: "Result must be constructed with either an 'ok' or 'error' property.",
-        },
-      );
+      assert.throws(() => new ResultConstructor({ something: "else" }), {
+        name: "TypeError",
+        message:
+          "Result must be constructed with either an 'ok' or 'error' property.",
+      });
     });
   });
 
