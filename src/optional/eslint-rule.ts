@@ -20,8 +20,8 @@ type Options = [
 type MessageIds = "noNullableReturn" | "useOptionalFrom" | "noNullableUnion";
 
 const createRule = ESLintUtils.RuleCreator(
-  (name) =>
-    `https://github.com/masstronaut/ts-utils/blob/main/docs/rules/${name}.md`,
+  () =>
+    `https://github.com/masstronaut/ts-utils/blob/main/src/optional/readme.md`,
 );
 
 /**

@@ -25,8 +25,8 @@ type MessageIds =
   | "useResultFromAsync";
 
 const createRule = ESLintUtils.RuleCreator(
-  (name) =>
-    `https://github.com/your-org/ts-utils/blob/main/docs/rules/${name}.md`,
+  () =>
+    `https://github.com/masstronaut/ts-utils/blob/main/src/result/readme.md`,
 );
 
 /**
@@ -295,31 +295,31 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
         // Check if the try block contains async operations using simplified traversal
         let hasAwait = false;
-        
+
         function detectAwait(n: TSESTree.Node): void {
           if (n.type === "AwaitExpression") {
             hasAwait = true;
             return; // Found await, no need to continue
           }
-          
+
           if (hasAwait) return; // Early exit if already found
-          
+
           // Traverse child nodes using ESLint's visitor keys
           const visitorKeys = context.sourceCode.visitorKeys[n.type] || [];
           for (const key of visitorKeys) {
             const child = (n as unknown as Record<string, unknown>)[key];
             if (Array.isArray(child)) {
               child.forEach((item) => {
-                if (item && typeof item === 'object' && 'type' in item) {
+                if (item && typeof item === "object" && "type" in item) {
                   detectAwait(item as TSESTree.Node);
                 }
               });
-            } else if (child && typeof child === 'object' && 'type' in child) {
+            } else if (child && typeof child === "object" && "type" in child) {
               detectAwait(child as TSESTree.Node);
             }
           }
         }
-        
+
         detectAwait(node.block);
 
         context.report({
