@@ -10,6 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import type { TSESLint } from '@typescript-eslint/utils';
 import parser from '@typescript-eslint/parser';
+import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import { enforceOptionalUsage } from './src/optional/eslint-rule.ts';
 import { enforceResultUsage } from './src/result/eslint-rule.ts';
 
@@ -39,8 +40,12 @@ const config: TSESLint.FlatConfig.ConfigArray = [
     },
     plugins: {
       'ts-utils': tsUtilsPlugin,
+      '@typescript-eslint': typescriptEslint,
     },
     rules: {
+      // Disallow explicit any types
+      '@typescript-eslint/no-explicit-any': 'error',
+      
       // Enforce Optional usage instead of nullable unions
       'ts-utils/enforce-optional-usage': ['error', {
         allowExceptions: [], // Add function names to exclude
