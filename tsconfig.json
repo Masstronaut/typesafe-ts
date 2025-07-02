@@ -16,6 +16,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "allowUnreachableCode": false,
+    "noImplicitAny": true,
     /* Node Stuff */
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true,

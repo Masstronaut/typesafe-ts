@@ -119,3 +119,157 @@ if(postsWithComments.is_some()) {
 ```
 
 Similar to the version using `null`, each step of the operation will only be run if the previous step produced a value. `Optional`'s `.and_then()` method encapsulates the empty check and only runs the provided function is a value is present. This made it possible to implement the `getUserPostsWithComments` using `Optional` in 11 lines of code, whereas before it required 20 lines.
+
+# Static Enforcement
+
+To help teams consistently adopt `Optional` patterns and avoid mixing nullable types with `Optional`, this utility includes an ESLint rule that enforces proper usage patterns. The rule helps identify places where nullable types (`T | null | undefined`) should be replaced with `Optional<T>` and suggests using `optional.from()` when calling functions that return nullable values.
+
+## Installation and Setup
+
+The ESLint rule is included with the Optional utility. To use it in your project with ESLint flat config:
+
+```js eslint.config.js
+import { enforceOptionalUsage } from './src/optional/eslint-rule.ts';
+
+export default [
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: {
+      'optional': {
+        rules: {
+          'enforce-optional-usage': enforceOptionalUsage
+        }
+      }
+    },
+    rules: {
+      'optional/enforce-optional-usage': 'error'
+    }
+  }
+];
+```
+
+## Configuration Options
+
+The rule accepts two configuration options:
+
+### `allowExceptions` (string[])
+
+An array of function names or patterns to exclude from the rule. Supports wildcard patterns using `*`.
+
+```js eslint.config.js
+rules: {
+  'optional/enforce-optional-usage': ['error', {
+    allowExceptions: [
+      'legacyFunction',      // Exact match
+      'legacy*',             // Wildcard pattern
+      '*Callback',           // Functions ending with 'Callback'
+      'third-party-*'        // Third-party function patterns
+    ]
+  }]
+}
+```
+
+### `autoFix` (boolean, default: true)
+
+Controls whether the rule provides automatic fixes for violations.
+
+```js eslint.config.js
+rules: {
+  'optional/enforce-optional-usage': ['error', {
+    autoFix: false  // Disable automatic fixes
+  }]
+}
+```
+
+## Rule Violations and Fixes
+
+The rule identifies three types of violations and provides automatic fixes where possible:
+
+### 1. Nullable Return Types (`noNullableReturn`)
+
+**Violation:** Functions returning `T | null` or `T | undefined`
+
+```ts
+// ❌ ESLint Error: Functions should return Optional<User> instead of User | null | undefined
+function findUser(id: string): User | null {
+  return users.find(u => u.id === id) ?? null;
+}
+
+// ✅ Fixed: Use Optional<T> return type
+function findUser(id: string): Optional<User> {
+  const user = users.find(u => u.id === id);
+  return user ? optional.some(user) : optional.none();
+}
+```
+
+**Note:** Auto-fix is disabled for this violation because it would only change the return type without updating the return statements. You must manually change both the return type to `: Optional<User>` and update return statements to use `optional.some(value)` or `optional.none()`.
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+
+### 2. Nullable Function Calls (`useOptionalFrom`)
+
+**Violation:** Direct calls to functions that return nullable types without wrapping in `optional.from()`
+
+```ts
+// ❌ ESLint Error: Calls to functions returning nullable types should be wrapped with optional.from()
+const element = document.getElementById('my-element');  // returns HTMLElement | null
+const user = users.find(u => u.active);                // returns User | undefined
+
+// ✅ Fixed: Wrap with optional.from()
+const element = optional.from(() => document.getElementById('my-element'));
+const user = optional.from(() => users.find(u => u.active));
+```
+
+**Auto-fix:** Function calls are automatically wrapped with `optional.from(() => originalCall)`.
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+
+The rule recognizes common nullable-returning APIs including:
+- DOM methods: `getElementById`, `querySelector`, `getElementsByClassName`, `getElementsByTagName`
+- Array methods: `find`, `pop`, `shift`
+- String methods: `match`
+
+### 3. Nullable Union Types (`noNullableUnion`)
+
+**Violation:** Variable declarations with nullable union types
+
+```ts
+// ❌ ESLint Error: Union types with null/undefined should use Optional<string> instead of string | null | undefined
+let userName: string | null = null;
+const result: number | undefined = computeValue();
+
+// ✅ Fixed: Use Optional<T> instead
+let userName: Optional<string> = optional.none();
+const result: Optional<number> = optional.from(() => computeValue());
+```
+
+**Note:** Auto-fix is disabled for this violation because it would only change the type annotation without updating the initialization value. You must manually change both the type to `: Optional<T>` and initialize with `optional.some(value)` or `optional.none()`.
+
+**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+
+## Message Types
+
+The rule provides specific error messages for each violation type:
+
+- **`noNullableReturn`**: "Functions should return Optional<T> instead of T | null | undefined. Consider using Optional for type-safe handling of potentially missing values."
+- **`useOptionalFrom`**: "Calls to functions returning nullable types should be wrapped with optional.from(). This ensures type-safe handling of non-values and avoids propagating them through the code."
+- **`noNullableUnion`**: "Union types with null/undefined should use Optional<T> instead of T | null | undefined for better type safety."
+
+## Exception Handling
+
+Use the `allowExceptions` option for cases where nullable types are necessary, such as:
+
+```js eslint.config.js
+rules: {
+  'optional/enforce-optional-usage': ['error', {
+    allowExceptions: [
+      'React*',              // React component props/callbacks
+      '*Callback',           // Callback functions
+      'legacy*',             // Legacy API functions
+      'thirdPartyApiCall'    // Specific third-party functions
+    ]
+  }]
+}
+```
+
+This allows you to gradually adopt `Optional` patterns while maintaining compatibility with existing code and third-party libraries that expect nullable types.

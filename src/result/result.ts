@@ -353,6 +353,7 @@ class ResultImpl<ResultType, ErrorType extends Error>
       this.error = result.error;
       this.value = none_value;
     } else {
+      // eslint-disable-next-line ts-utils/enforce-result-usage
       throw new TypeError(
         "Result must be constructed with either an 'ok' or 'error' property.",
       );
@@ -578,6 +579,8 @@ const result = Object.freeze({
    * ```
    */
   from: <T>(fn: () => T): Result<T, Error> => {
+    // need to use try/catch to wrap throwing functions in results.
+    // eslint-disable-next-line ts-utils/enforce-result-usage
     try {
       return ResultImpl.ok(fn());
     } catch (error) {
@@ -622,6 +625,8 @@ const result = Object.freeze({
    * ```
    */
   from_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
+    // need to use try/catch to wrap throwing functions in results.
+    // eslint-disable-next-line ts-utils/enforce-result-usage
     try {
       const value = await fn();
       return ResultImpl.ok(value);

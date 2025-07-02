@@ -34,6 +34,35 @@ test("Result", async (t) => {
         assert.strictEqual(undefinedOkResult.value, undefined);
       }
     });
+
+    t.test("constructor validates arguments defensively", () => {
+      const okResult = result.ok("test");
+      // Since the ResultImpl is not part of the public interface,
+      // we are doing some funny business to access the constructor and test invariants.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ResultConstructor = (okResult as any).constructor;
+
+      assert.throws(
+        () => new ResultConstructor({ ok: "value", error: new Error("both") }),
+        {
+          name: "TypeError",
+          message:
+            "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
+
+      assert.throws(() => new ResultConstructor({}), {
+        name: "TypeError",
+        message:
+          "Result must be constructed with either an 'ok' or 'error' property.",
+      });
+
+      assert.throws(() => new ResultConstructor({ something: "else" }), {
+        name: "TypeError",
+        message:
+          "Result must be constructed with either an 'ok' or 'error' property.",
+      });
+    });
   });
 
   t.test("Type Predicates & Narrowing", async (t) => {
@@ -60,7 +89,7 @@ test("Result", async (t) => {
     t.test("is_ok() narrows correctly in else branch", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
-      
+
       if (errorResult.is_ok()) {
         assert.fail("Result should not be Ok");
       } else {
@@ -73,7 +102,7 @@ test("Result", async (t) => {
     t.test("is_error() narrows correctly in else branch", () => {
       const value = "Hello World";
       const okResult = result.ok<string, Error>(value);
-      
+
       if (okResult.is_error()) {
         assert.fail("Result should not be Error");
       } else {
@@ -88,7 +117,7 @@ test("Result", async (t) => {
         result.ok(42),
         result.error(new Error("Failed")),
         result.ok(0),
-        result.error(new Error("Another failure"))
+        result.error(new Error("Another failure")),
       ];
 
       const values: number[] = [];
@@ -110,21 +139,28 @@ test("Result", async (t) => {
       assert.strictEqual(errors[1]?.message, "Another failure");
     });
 
-    t.test("discriminated union preserves type information through chaining", () => {
-      const maybeNumber = result.ok<number, Error>(5);
-      
-      const processed = maybeNumber
-        .map(x => x * 2)
-        .and_then(x => x > 8 ? result.ok(x.toString()) : result.error(new Error("Too small")));
+    t.test(
+      "discriminated union preserves type information through chaining",
+      () => {
+        const maybeNumber = result.ok<number, Error>(5);
 
-      if (processed.is_ok()) {
-        // TypeScript knows this is string
-        assert.strictEqual(processed.value, "10");
-        assert.strictEqual(processed.value.length, 2);
-      } else {
-        assert.fail("Should have been Ok");
-      }
-    });
+        const processed = maybeNumber
+          .map((x) => x * 2)
+          .and_then((x) =>
+            x > 8
+              ? result.ok(x.toString())
+              : result.error(new Error("Too small")),
+          );
+
+        if (processed.is_ok()) {
+          // TypeScript knows this is string
+          assert.strictEqual(processed.value, "10");
+          assert.strictEqual(processed.value.length, 2);
+        } else {
+          assert.fail("Should have been Ok");
+        }
+      },
+    );
   });
 
   t.test("Value/Error Access", async (t) => {
@@ -391,12 +427,6 @@ test("Result", async (t) => {
         assert.strictEqual(errorResult.error.code, 404);
         assert.strictEqual(errorResult.error.message, "Custom error");
       }
-    });
-
-    t.test("asserts construction invariant", () => {
-      const Constructor = result.ok(1).constructor as any;
-      assert.throws(() => new Constructor({}));
-      assert.throws(() => new Constructor({ ok: 1, error: new Error() }));
     });
   });
 
