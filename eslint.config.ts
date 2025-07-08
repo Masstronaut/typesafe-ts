@@ -11,8 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 import type { TSESLint } from '@typescript-eslint/utils';
 import parser from '@typescript-eslint/parser';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
-import { enforceOptionalUsage } from './src/optional/eslint-rule.ts';
-import { enforceResultUsage } from './src/result/eslint-rule.ts';
+import { enforceOptionalUsage } from './src/optional/lint.ts';
+import { enforceResultUsage } from './src/result/lint.ts';
 
 /**
  * ESLint 9 flat configuration for ts-utils with custom TypeScript monadic rules.

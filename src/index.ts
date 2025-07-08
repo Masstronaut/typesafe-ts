@@ -8,4 +8,15 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-export { optional, type Optional } from './optional.js';
+/**
+ * ts-utils: TypeScript utilities for functional programming
+ *
+ * This package provides monadic types and utilities for type-safe functional programming
+ * in TypeScript, along with ESLint rules to enforce their usage.
+ */
+
+// Export Optional monad and related utilities
+export * from "./optional/index.js";
+
+// Export Result monad and related utilities
+export * from "./result/index.js";

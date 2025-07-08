@@ -10,7 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import { test } from "node:test";
 import { RuleTester } from "@typescript-eslint/rule-tester";
-import { enforceOptionalUsage } from "./eslint-rule.ts";
+import { enforceOptionalUsage } from "./lint.ts";
 
 // Configure RuleTester for Node.js test environment
 RuleTester.afterAll = () => { };

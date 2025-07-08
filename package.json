@@ -1,8 +1,34 @@
 {
-  "name": "ts-utils",
+  "name": "typesafe-ts",
   "version": "0.0.1",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./optional": {
+      "types": "./dist/optional/index.d.ts",
+      "default": "./dist/optional/index.js"
+    },
+    "./optional/lint": {
+      "types": "./dist/optional/lint.d.ts",
+      "default": "./dist/optional/lint.js"
+    },
+    "./result": {
+      "types": "./dist/result/index.d.ts",
+      "default": "./dist/result/index.js"
+    },
+    "./result/lint": {
+      "types": "./dist/result/lint.d.ts",
+      "default": "./dist/result/lint.js"
+    }
+  },
   "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "rm -rf dist",
     "test": "node --test --experimental-test-coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
@@ -10,9 +36,13 @@
     "lint:fix": "eslint \"src/**/*.ts\" --fix"
   },
   "keywords": [],
-  "author": "",
+  "files": [
+    "dist/",
+    "LICENSE.txt",
+    "readme.md"
+  ],
+  "author": "Allan Deutsch",
   "license": "MIT",
-  "type": "module",
   "description": "",
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.5",
