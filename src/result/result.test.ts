@@ -541,9 +541,9 @@ await test("Result", async (t) => {
   });
 
   await t.test("Function Wrapping API", async (t) => {
-    await t.test("result.from() wraps successful function execution", () => {
+    await t.test("result.try() wraps successful function execution", () => {
       const successFn = () => "success";
-      const res = result.from(successFn);
+      const res = result.try(successFn);
 
       assert.ok(res.is_ok());
       if (res.is_ok()) {
@@ -551,11 +551,11 @@ await test("Result", async (t) => {
       }
     });
 
-    await t.test("result.from() wraps function that throws Error", () => {
+    await t.test("result.try() wraps function that throws Error", () => {
       const throwingFn = () => {
         throw new Error("Test error");
       };
-      const res = result.from(throwingFn);
+      const res = result.try(throwingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -565,13 +565,13 @@ await test("Result", async (t) => {
     });
 
     await t.test(
-      "result.from() wraps function that throws non-Error value",
+      "result.try() wraps function that throws non-Error value",
       () => {
         const throwingFn = () => {
           // eslint-disable-next-line @typescript-eslint/only-throw-error
           throw "string error";
         };
-        const res = result.from(throwingFn);
+        const res = result.try(throwingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -581,33 +581,33 @@ await test("Result", async (t) => {
       },
     );
 
-    await t.test("result.from() works with different return types", () => {
-      const numberResult = result.from(() => 42);
+    await t.test("result.try() works with different return types", () => {
+      const numberResult = result.try(() => 42);
       assert.ok(numberResult.is_ok());
       if (numberResult.is_ok()) {
         assert.strictEqual(numberResult.value, 42);
       }
 
-      const objectResult = result.from(() => ({ name: "test" }));
+      const objectResult = result.try(() => ({ name: "test" }));
       assert.ok(objectResult.is_ok());
       if (objectResult.is_ok()) {
         assert.deepStrictEqual(objectResult.value, { name: "test" });
       }
 
       // eslint-disable-next-line typesafe-ts/enforce-optional-usage
-      const nullResult = result.from(() => null);
+      const nullResult = result.try(() => null);
       assert.ok(nullResult.is_ok());
       if (nullResult.is_ok()) {
         assert.strictEqual(nullResult.value, null);
       }
     });
 
-    await t.test("result.from() preserves Error types", () => {
+    await t.test("result.try() preserves Error types", () => {
       const customError = new TypeError("Custom type error");
       const throwingFn = () => {
         throw customError;
       };
-      const res = result.from(throwingFn);
+      const res = result.try(throwingFn);
 
       assert.ok(res.is_error());
       if (res.is_error()) {
@@ -617,10 +617,10 @@ await test("Result", async (t) => {
     });
 
     await t.test(
-      "result.from_async() wraps successful async function",
+      "result.try_async() wraps successful async function",
       async () => {
         const asyncSuccessFn = () => Promise.resolve("async success");
-        const res = await result.from_async(asyncSuccessFn);
+        const res = await result.try_async(asyncSuccessFn);
 
         assert.ok(res.is_ok());
         if (res.is_ok()) {
@@ -630,13 +630,13 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from_async() wraps async function that rejects with Error",
+      "result.try_async() wraps async function that rejects with Error",
       async () => {
         // eslint-disable-next-line @typescript-eslint/require-await
         const asyncThrowingFn = async () => {
           throw new Error("Async error");
         };
-        const res = await result.from_async(asyncThrowingFn);
+        const res = await result.try_async(asyncThrowingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -647,14 +647,14 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from_async() wraps async function that rejects with non-Error",
+      "result.try_async() wraps async function that rejects with non-Error",
       async () => {
         // eslint-disable-next-line @typescript-eslint/require-await
         const asyncThrowingFn = async () => {
           // eslint-disable-next-line @typescript-eslint/only-throw-error
           throw "async string error";
         };
-        const res = await result.from_async(asyncThrowingFn);
+        const res = await result.try_async(asyncThrowingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -665,15 +665,15 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from_async() works with different resolved types",
+      "result.try_async() works with different resolved types",
       async () => {
-        const numberResult = await result.from_async(() => Promise.resolve(42));
+        const numberResult = await result.try_async(() => Promise.resolve(42));
         assert.ok(numberResult.is_ok());
         if (numberResult.is_ok()) {
           assert.strictEqual(numberResult.value, 42);
         }
 
-        const arrayResult = await result.from_async(() =>
+        const arrayResult = await result.try_async(() =>
           Promise.resolve([1, 2, 3]),
         );
         assert.ok(arrayResult.is_ok());
@@ -684,14 +684,14 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from_async() preserves async Error types",
+      "result.try_async() preserves async Error types",
       async () => {
         const customError = new RangeError("Custom range error");
         // eslint-disable-next-line @typescript-eslint/require-await
         const asyncThrowingFn = async () => {
           throw customError;
         };
-        const res = await result.from_async(asyncThrowingFn);
+        const res = await result.try_async(asyncThrowingFn);
 
         assert.ok(res.is_error());
         if (res.is_error()) {
@@ -702,7 +702,7 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from_async() properly awaits async operations",
+      "result.try_async() properly awaits async operations",
       async () => {
         let counter = 0;
         const asyncFn = async () => {
@@ -710,7 +710,7 @@ await test("Result", async (t) => {
           return ++counter;
         };
 
-        const res = await result.from_async(asyncFn);
+        const res = await result.try_async(asyncFn);
         assert.ok(res.is_ok());
         if (res.is_ok()) {
           assert.strictEqual(res.value, 1);
@@ -720,11 +720,11 @@ await test("Result", async (t) => {
     );
 
     await t.test(
-      "result.from() and result.of_async() work with JSON parsing example",
+      "result.try() and result.try_async() work with JSON parsing example",
       async () => {
         // Sync JSON parsing
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        const validJson = result.from(() => JSON.parse('{"name": "John"}'));
+        const validJson = result.try(() => JSON.parse('{"name": "John"}'));
         assert.ok(validJson.is_ok());
         if (validJson.is_ok()) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -732,14 +732,14 @@ await test("Result", async (t) => {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        const invalidJson = result.from(() => JSON.parse("invalid json"));
+        const invalidJson = result.try(() => JSON.parse("invalid json"));
         assert.ok(invalidJson.is_error());
         if (invalidJson.is_error()) {
           assert.ok(invalidJson.error instanceof SyntaxError);
         }
 
         // Async version
-        const asyncValidJson = await result.from_async(() =>
+        const asyncValidJson = await result.try_async(() =>
           Promise.resolve(JSON.parse('{"age": 30}')),
         );
         assert.ok(asyncValidJson.is_ok());

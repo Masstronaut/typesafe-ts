@@ -21,8 +21,8 @@ type Options = [
 type MessageIds =
   | "noThrowStatement"
   | "noTryCatchBlock"
-  | "useResultFrom"
-  | "useResultFromAsync";
+  | "useResultTry"
+  | "useResultTryAsync";
 
 const createRule = ESLintUtils.RuleCreator(
   () =>
@@ -34,8 +34,8 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * This rule:
  * - Disallows `throw` statements, suggesting `result.error()` instead
- * - Disallows `try/catch` blocks, suggesting `result.from()` or `result.from_async()`
- * - Detects calls to functions that throw and requires wrapping with `result.from()`
+ * - Disallows `try/catch` blocks, suggesting `result.try()` or `result.try_async()`
+ * - Detects calls to functions that throw and requires wrapping with `result.try()`
  * - Provides auto-fix suggestions where possible
  */
 export const enforceResultUsage = createRule<Options, MessageIds>({
@@ -74,11 +74,11 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
       noThrowStatement:
         "Use result.error() instead of throw statements for functional error handling. This ensures errors are part of the type system.",
       noTryCatchBlock:
-        "Use result.from() or result.from_async() instead of try/catch blocks for type-safe error handling.",
-      useResultFrom:
-        "Calls to functions that may throw should be wrapped with result.from(). This ensures exceptions are handled safely.",
-      useResultFromAsync:
-        "Calls to async functions that may throw should be wrapped with result.from_async(). This ensures exceptions are handled safely.",
+        "Use result.try() or result.try_async() instead of try/catch blocks for type-safe error handling.",
+      useResultTry:
+        "Calls to functions that may throw should be wrapped with result.try(). This ensures exceptions are handled safely.",
+      useResultTryAsync:
+        "Calls to async functions that may throw should be wrapped with result.try_async(). This ensures exceptions are handled safely.",
     },
   },
   defaultOptions: [
@@ -121,7 +121,7 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
     function isAlreadyWrappedInResult(node: TSESTree.Node): boolean {
       if (node.parent === undefined) return false;
-      // Check if this call is already inside result.from() or result.from_async()
+      // Check if this call is already inside result.try() or result.try_async()
       let parent: TSESTree.Node = node.parent;
       while (parent) {
         if (
@@ -131,8 +131,8 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
           parent.parent.callee.object.type === AST_NODE_TYPES.Identifier &&
           parent.parent.callee.object.name === "result" &&
           parent.parent.callee.property.type === AST_NODE_TYPES.Identifier &&
-          (parent.parent.callee.property.name === "from" ||
-            parent.parent.callee.property.name === "from_async")
+          (parent.parent.callee.property.name === "try" ||
+            parent.parent.callee.property.name === "try_async")
         ) {
           return true;
         }
@@ -336,12 +336,12 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
               if (hasAwait) {
                 return fixer.replaceText(
                   node,
-                  `const result = await result.from_async(async () => {${innerContent}});`,
+                  `const result = await result.try_async(async () => {${innerContent}});`,
                 );
               } else {
                 return fixer.replaceText(
                   node,
-                  `const result = result.from(() => {${innerContent}});`,
+                  `const result = result.try(() => {${innerContent}});`,
                 );
               }
             }
@@ -358,14 +358,14 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
         )
           return;
 
-        // Skip if this is already a result.from() or result.from_async() call
+        // Skip if this is already a result.try() or result.try_async() call
         if (
           node.callee.type === AST_NODE_TYPES.MemberExpression &&
           node.callee.object.type === AST_NODE_TYPES.Identifier &&
           node.callee.object.name === "result" &&
           node.callee.property.type === AST_NODE_TYPES.Identifier &&
-          (node.callee.property.name === "from" ||
-            node.callee.property.name === "from_async")
+          (node.callee.property.name === "try" ||
+            node.callee.property.name === "try_async")
         ) {
           return;
         }
@@ -379,8 +379,8 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
           context.report({
             node,
             messageId: isAsync
-              ? ("useResultFromAsync" as const)
-              : ("useResultFrom" as const),
+              ? ("useResultTryAsync" as const)
+              : ("useResultTry" as const),
             fix: autoFix
               ? (fixer) => {
                 const sourceCode = context.sourceCode;
@@ -389,12 +389,12 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
                 if (isAsync) {
                   return fixer.replaceText(
                     node,
-                    `result.from_async(() => ${callText})`,
+                    `result.try_async(() => ${callText})`,
                   );
                 } else {
                   return fixer.replaceText(
                     node,
-                    `result.from(() => ${callText})`,
+                    `result.try(() => ${callText})`,
                   );
                 }
               }

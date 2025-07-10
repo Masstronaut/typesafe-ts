@@ -458,8 +458,8 @@ class ResultImpl<ResultType, ErrorType extends Error>
  *
  * @property {function} ok - Creates a successful Result containing the provided value
  * @property {function} error - Creates a failed Result containing the provided error
- * @property {function} from - Executes a function and wraps the result in a Result type
- * @property {function} from_async - Executes an async function and wraps the result in a Result type
+ * @property {function} try - Executes a function and wraps the result in a Result type
+ * @property {function} try_async - Executes an async function and wraps the result in a Result type
  * @property {function} retry - Retries a Result-returning function multiple times until success
  * @property {function} retry_async - Retries an async Result-returning function multiple times until success
  *
@@ -566,26 +566,26 @@ const result = {
    *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
    * }
    *
-   * const validResult = result.from(() => parseJSON('{"name": "John"}'));
+   * const validResult = result.try(() => parseJSON('{"name": "John"}'));
    * if (validResult.is_ok()) {
    *   console.log(validResult.value.name); // "John"
    * }
    *
-   * const invalidResult = result.from(() => parseJSON('invalid json'));
+   * const invalidResult = result.try(() => parseJSON('invalid json'));
    * if (invalidResult.is_error()) {
    *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
    * }
    *
    * // Converting existing throwing APIs
-   * const fileContent = result.from(() => fs.readFileSync('file.txt', 'utf8'));
-   * const parsedNumber = result.from(() => {
+   * const fileContent = result.try(() => fs.readFileSync('file.txt', 'utf8'));
+   * const parsedNumber = result.try(() => {
    *   const num = parseInt(userInput);
    *   if (isNaN(num)) throw new Error("Not a valid number");
    *   return num;
    * });
    * ```
    */
-  from: <T>(fn: () => T): Result<T, Error> => {
+  try: <T>(fn: () => T): Result<T, Error> => {
     // need to use try/catch to wrap throwing functions in results.
     // eslint-disable-next-line typesafe-ts/enforce-result-usage
     try {
@@ -615,7 +615,7 @@ const result = {
    *   return response.json();
    * }
    *
-   * const userResult = await result.from_async(() => fetchUserData("123"));
+   * const userResult = await result.try_async(() => fetchUserData("123"));
    * if (userResult.is_ok()) {
    *   console.log(userResult.value.name);
    * } else {
@@ -623,15 +623,15 @@ const result = {
    * }
    *
    * // Converting Promise-based APIs
-   * const fileContent = await result.from_async(() => fs.promises.readFile('file.txt', 'utf8'));
-   * const apiData = await result.from_async(async () => {
+   * const fileContent = await result.try_async(() => fs.promises.readFile('file.txt', 'utf8'));
+   * const apiData = await result.try_async(async () => {
    *   const response = await fetch('/api/data');
    *   if (!response.ok) throw new Error('API request failed');
    *   return response.json();
    * });
    * ```
    */
-  from_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
+  try_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
     // need to use try/catch to wrap throwing functions in results.
     // eslint-disable-next-line typesafe-ts/enforce-result-usage
     try {
@@ -751,7 +751,7 @@ const result = {
    *
    * // Network request example
    * async function fetchDataAsync(): Promise<Result<string, Error>> {
-   *   return result.of_async(async () => {
+   *   return result.try_async(async () => {
    *     const response = await fetch('/api/data');
    *     if (!response.ok) {
    *       throw new Error(`HTTP ${response.status}`);

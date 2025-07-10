@@ -70,8 +70,8 @@ export interface Result<ResultType, ErrorType extends Error> {
 export const result = {
   ok, // constructs a `Result` with a success value
   error, // constructs a `Result` with an error
-  of, // constructs a `Result` from a provided function. Ok if it returns, Error if it throws.
-  of_async, // constructs a `Result` from an async function. Ok if it resolves, Error if it rejects or throws
+  try, // constructs a `Result` from a provided function. Ok if it returns, Error if it throws.
+  try_async, // constructs a `Result` from an async function. Ok if it resolves, Error if it rejects or throws
   retry, // executes a Result-returning function multiple times until success or retry limit is reached
   retry_async, // executes an async Result-returning function multiple times until success or retry limit is reached
 };
@@ -204,8 +204,8 @@ To help teams consistently adopt `Result` patterns and avoid mixing exception-ba
 The `enforce-result-usage` rule automatically detects and flags:
 
 - **Throw statements** - suggests using `result.error()` instead
-- **Try/catch blocks** - suggests using `result.from()` or `result.from_async()` instead  
-- **Calls to throwing functions** - suggests wrapping with `result.from()` or `result.from_async()`
+- **Try/catch blocks** - suggests using `result.try()` or `result.try_async()` instead  
+- **Calls to throwing functions** - suggests wrapping with `result.try()` or `result.try_async()`
 
 The rule provides automatic fixes for most violations, making migration to Result patterns straightforward.
 
@@ -341,7 +341,7 @@ function readConfig(): ConfigData | null {
 **✅ Auto-fixed Code:**
 ```ts
 function readConfig(): Result<ConfigData, Error> {
-  const result = result.from(() => {
+  const result = result.try(() => {
     const data = fs.readFileSync('config.json', 'utf8');
     return JSON.parse(data);
   });
@@ -373,7 +373,7 @@ async function fetchUserData(id: string): Promise<UserData | null> {
 **✅ Auto-fixed Code:**
 ```ts
 async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
-  const result = await result.from_async(async () => {
+  const result = await result.try_async(async () => {
     const response = await fetch(`/api/users/${id}`);
     return await response.json();
   });
@@ -400,7 +400,7 @@ function processData(jsonString: string): ProcessedData {
 **✅ Auto-fixed Code:**
 ```ts
 function processData(jsonString: string): Result<ProcessedData, Error> {
-  return result.from(() => JSON.parse(jsonString))
+  return result.try(() => JSON.parse(jsonString))
     .map(data => transformData(data));
 }
 ```
@@ -423,7 +423,7 @@ async function uploadFile(file: File): Promise<UploadResult> {
 **✅ Auto-fixed Code:**
 ```ts
 async function uploadFile(file: File): Promise<Result<UploadResult, Error>> {
-  return await result.from_async(async () => {
+  return await result.try_async(async () => {
     const response = await fetch('/upload', {
       method: 'POST',
       body: file
@@ -440,9 +440,9 @@ The rule provides four different violation messages:
 | Message ID | Description | Triggered By |
 |------------|-------------|--------------|
 | `noThrowStatement` | Use `result.error()` instead of throw statements | `throw` statements |
-| `noTryCatchBlock` | Use `result.from()` or `result.from_async()` instead of try/catch | `try/catch` blocks |
-| `useResultFrom` | Wrap throwing function calls with `result.from()` | Calls to functions that may throw |
-| `useResultFromAsync` | Wrap async throwing functions with `result.from_async()` | Calls to async functions that may throw |
+| `noTryCatchBlock` | Use `result.try()` or `result.try_async()` instead of try/catch | `try/catch` blocks |
+| `useResultTry` | Wrap throwing function calls with `result.try()` | Calls to functions that may throw |
+| `useResultTryAsync` | Wrap async throwing functions with `result.try_async()` | Calls to async functions that may throw |
 
 ## Integration with Development Workflow
 
