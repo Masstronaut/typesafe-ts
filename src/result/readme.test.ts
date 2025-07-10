@@ -3,8 +3,8 @@ import assert from "node:assert";
 
 import { result, type Result } from "./result.ts";
 
-test("Readme examples work correctly", async (t) => {
-  t.test("Result-based mathematical expression calculation", () => {
+await test("Readme examples work correctly", async (t) => {
+  await t.test("Result-based mathematical expression calculation", () => {
     function parseNumber(str: string): Result<number, Error> {
       const num = Number(str);
       return isNaN(num) 

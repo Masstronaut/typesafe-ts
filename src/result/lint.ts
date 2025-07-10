@@ -8,7 +8,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import { ESLintUtils, TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils, TSESTree, AST_NODE_TYPES } from "@typescript-eslint/utils";
 
 type Options = [
   {
@@ -108,11 +108,11 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
     }
 
     function getFunctionName(node: TSESTree.CallExpression): string {
-      if (node.callee.type === "Identifier") {
+      if (node.callee.type === AST_NODE_TYPES.Identifier) {
         return node.callee.name;
       } else if (
-        node.callee.type === "MemberExpression" &&
-        node.callee.property.type === "Identifier"
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.property.type === AST_NODE_TYPES.Identifier
       ) {
         return node.callee.property.name;
       }
@@ -125,12 +125,12 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
       let parent: TSESTree.Node = node.parent;
       while (parent) {
         if (
-          parent.type === "ArrowFunctionExpression" &&
-          parent.parent?.type === "CallExpression" &&
-          parent.parent.callee.type === "MemberExpression" &&
-          parent.parent.callee.object.type === "Identifier" &&
+          parent.type === AST_NODE_TYPES.ArrowFunctionExpression &&
+          parent.parent?.type === AST_NODE_TYPES.CallExpression &&
+          parent.parent.callee.type === AST_NODE_TYPES.MemberExpression &&
+          parent.parent.callee.object.type === AST_NODE_TYPES.Identifier &&
           parent.parent.callee.object.name === "result" &&
-          parent.parent.callee.property.type === "Identifier" &&
+          parent.parent.callee.property.type === AST_NODE_TYPES.Identifier &&
           (parent.parent.callee.property.name === "from" ||
             parent.parent.callee.property.name === "from_async")
         ) {
@@ -147,7 +147,7 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
       let parent: TSESTree.Node = node.parent;
       while (parent) {
-        if (parent.type === "TryStatement") {
+        if (parent.type === AST_NODE_TYPES.TryStatement) {
           return true;
         }
 
@@ -179,9 +179,9 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
     function isThrowingMemberAPI(node: TSESTree.CallExpression): boolean {
       // Check for member expressions like JSON.parse
       if (
-        node.callee.type === "MemberExpression" &&
-        node.callee.object.type === "Identifier" &&
-        node.callee.property.type === "Identifier"
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.object.type === AST_NODE_TYPES.Identifier &&
+        node.callee.property.type === AST_NODE_TYPES.Identifier
       ) {
         const objectName = node.callee.object.name;
         const methodName = node.callee.property.name;
@@ -241,9 +241,9 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
             ].includes(current.type)
           ) {
             const functionName =
-              (current.type === "FunctionDeclaration" && current.id?.name) ||
-              (current.parent?.type === "VariableDeclarator" &&
-                current.parent.id.type === "Identifier" &&
+              (current.type === AST_NODE_TYPES.FunctionDeclaration && current.id?.name) ||
+              (current.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+                current.parent.id.type === AST_NODE_TYPES.Identifier &&
                 current.parent.id.name) ||
               "anonymous";
 
@@ -264,15 +264,15 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
               // Handle different types of throw arguments
               if (
-                node.argument.type === "NewExpression" &&
-                node.argument.callee.type === "Identifier" &&
+                node.argument.type === AST_NODE_TYPES.NewExpression &&
+                node.argument.callee.type === AST_NODE_TYPES.Identifier &&
                 node.argument.callee.name === "Error"
               ) {
                 return fixer.replaceText(
                   node,
                   `return result.error(${argumentText});`,
                 );
-              } else if (node.argument.type === "Identifier") {
+              } else if (node.argument.type === AST_NODE_TYPES.Identifier) {
                 return fixer.replaceText(
                   node,
                   `return result.error(${argumentText});`,
@@ -297,7 +297,7 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
         let hasAwait = false;
 
         function detectAwait(n: TSESTree.Node): void {
-          if (n.type === "AwaitExpression") {
+          if (n.type === AST_NODE_TYPES.AwaitExpression) {
             hasAwait = true;
             return; // Found await, no need to continue
           }
@@ -360,10 +360,10 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
         // Skip if this is already a result.from() or result.from_async() call
         if (
-          node.callee.type === "MemberExpression" &&
-          node.callee.object.type === "Identifier" &&
+          node.callee.type === AST_NODE_TYPES.MemberExpression &&
+          node.callee.object.type === AST_NODE_TYPES.Identifier &&
           node.callee.object.name === "result" &&
-          node.callee.property.type === "Identifier" &&
+          node.callee.property.type === AST_NODE_TYPES.Identifier &&
           (node.callee.property.name === "from" ||
             node.callee.property.name === "from_async")
         ) {

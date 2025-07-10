@@ -268,8 +268,8 @@ Object.freeze(OptionalImpl);
  * @property none - Creates an empty Optional. It is recommended to explicitly specify the type of empty `Optional`s.
  */
 export const optional = {
-  some: OptionalImpl.some,
-  none: OptionalImpl.none,
+  some: <ValueType>(value: ValueType): Optional<ValueType> => OptionalImpl.some(value),
+  none: <ValueType>(): Optional<ValueType> => OptionalImpl.none<ValueType>(),
 
   /**
    * Executes a function and wraps the result in an Optional type.

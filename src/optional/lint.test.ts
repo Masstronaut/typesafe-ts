@@ -8,14 +8,18 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import { RuleTester } from "@typescript-eslint/rule-tester";
 import { enforceOptionalUsage } from "./lint.ts";
 
-// Configure RuleTester for Node.js test environment
+// Configure RuleTester for Node.js test environment as recommended
+// https://typescript-eslint.io/packages/rule-tester/#nodejs-nodetest
+
 RuleTester.afterAll = () => { };
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.it = test;
-RuleTester.describe = (name: string, fn: () => void) => test(name, fn);
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+RuleTester.describe = describe;
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -98,7 +102,7 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const result = optional.from(() => condition ? "value" : null);`,
     },
     {
-      name: "Arrow functions returning undefined inside optional.from() are valid", 
+      name: "Arrow functions returning undefined inside optional.from() are valid",
       code: `const result = optional.from(() => condition ? 42 : undefined);`,
     },
     {

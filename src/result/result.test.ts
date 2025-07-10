@@ -3,23 +3,23 @@ import assert from "node:assert";
 
 import { result, type Result } from "./result.ts";
 
-test("Result", async (t) => {
-  t.test("Construction & Factory Methods", async (t) => {
-    t.test("can create Ok result with result.ok()", () => {
+await test("Result", async (t) => {
+  await t.test("Construction & Factory Methods", async (t) => {
+    await t.test("can create Ok result with result.ok()", () => {
       const value = "Hello";
       const okResult = result.ok(value);
       assert.ok(okResult.is_ok());
       assert.ok(!okResult.is_error());
     });
 
-    t.test("can create Error result with result.error()", () => {
+    await t.test("can create Error result with result.error()", () => {
       const error = new Error("Test error");
       const errorResult = result.error(error);
       assert.ok(errorResult.is_error());
       assert.ok(!errorResult.is_ok());
     });
 
-    t.test("accepts null as valid Ok value", () => {
+    await t.test("accepts null as valid Ok value", () => {
       const nullOkResult = result.ok(null);
       assert.ok(nullOkResult.is_ok());
       if (nullOkResult.is_ok()) {
@@ -27,7 +27,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("accepts undefined as valid Ok value", () => {
+    await t.test("accepts undefined as valid Ok value", () => {
       const undefinedOkResult = result.ok(undefined);
       assert.ok(undefinedOkResult.is_ok());
       if (undefinedOkResult.is_ok()) {
@@ -35,14 +35,15 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("constructor validates arguments defensively", () => {
+    await t.test("constructor validates arguments defensively", () => {
       const okResult = result.ok("test");
       // Since the ResultImpl is not part of the public interface,
       // we are doing some funny business to access the constructor and test invariants.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const ResultConstructor = (okResult as any).constructor;
 
       assert.throws(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         () => new ResultConstructor({ ok: "value", error: new Error("both") }),
         {
           name: "TypeError",
@@ -51,22 +52,30 @@ test("Result", async (t) => {
         },
       );
 
-      assert.throws(() => new ResultConstructor({}), {
-        name: "TypeError",
-        message:
-          "Result must be constructed with either an 'ok' or 'error' property.",
-      });
+      assert.throws(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        () => new ResultConstructor({}),
+        {
+          name: "TypeError",
+          message:
+            "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
 
-      assert.throws(() => new ResultConstructor({ something: "else" }), {
-        name: "TypeError",
-        message:
-          "Result must be constructed with either an 'ok' or 'error' property.",
-      });
+      assert.throws(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        () => new ResultConstructor({ something: "else" }),
+        {
+          name: "TypeError",
+          message:
+            "Result must be constructed with either an 'ok' or 'error' property.",
+        },
+      );
     });
   });
 
-  t.test("Type Predicates & Narrowing", async (t) => {
-    t.test("is_ok() narrows type to OkResult", () => {
+  await t.test("Type Predicates & Narrowing", async (t) => {
+    await t.test("is_ok() narrows type to OkResult", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       if (okResult.is_ok()) {
@@ -76,7 +85,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("is_error() narrows type to ErrorResult", () => {
+    await t.test("is_error() narrows type to ErrorResult", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       if (errorResult.is_error()) {
@@ -86,7 +95,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("is_ok() narrows correctly in else branch", () => {
+    await t.test("is_ok() narrows correctly in else branch", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
 
@@ -99,7 +108,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("is_error() narrows correctly in else branch", () => {
+    await t.test("is_error() narrows correctly in else branch", () => {
       const value = "Hello World";
       const okResult = result.ok<string, Error>(value);
 
@@ -112,7 +121,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("discriminated union works with complex branching", () => {
+    await t.test("discriminated union works with complex branching", () => {
       const testResults: Result<number, Error>[] = [
         result.ok(42),
         result.error(new Error("Failed")),
@@ -139,7 +148,7 @@ test("Result", async (t) => {
       assert.strictEqual(errors[1]?.message, "Another failure");
     });
 
-    t.test(
+    await t.test(
       "discriminated union preserves type information through chaining",
       () => {
         const maybeNumber = result.ok<number, Error>(5);
@@ -163,8 +172,8 @@ test("Result", async (t) => {
     );
   });
 
-  t.test("Value/Error Access", async (t) => {
-    t.test("value_or() returns value for Ok results", () => {
+  await t.test("Value/Error Access", async (t) => {
+    await t.test("value_or() returns value for Ok results", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       assert.strictEqual(okResult.value_or("Default"), value);
@@ -179,7 +188,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("value_or() returns default for Error results", () => {
+    await t.test("value_or() returns default for Error results", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       assert.strictEqual(errorResult.value_or("Default"), "Default");
@@ -188,14 +197,14 @@ test("Result", async (t) => {
       assert.strictEqual(numericResult.value_or(123), 123);
     });
 
-    t.test("error_or() returns error for Error results", () => {
+    await t.test("error_or() returns error for Error results", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       const defaultError = new Error("Default error");
       assert.strictEqual(errorResult.error_or(defaultError), error);
     });
 
-    t.test("error_or() returns default for Ok results", () => {
+    await t.test("error_or() returns default for Ok results", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       const defaultError = new Error("Default error");
@@ -203,8 +212,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Transformation Operations", async (t) => {
-    t.test("map() transforms Ok values", () => {
+  await t.test("Transformation Operations", async (t) => {
+    await t.test("map() transforms Ok values", () => {
       const value = "hello";
       const okResult = result.ok<string, Error>(value);
       const transformed = okResult.map((v) => v.toUpperCase());
@@ -222,7 +231,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("map() doesn't run transformation on Error results", () => {
+    await t.test("map() doesn't run transformation on Error results", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       const transformed = errorResult.map(() => {
@@ -237,7 +246,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("map_err() transforms Error values", () => {
+    await t.test("map_err() transforms Error values", () => {
       const originalError = new Error("Original error");
       const errorResult = result.error<string, Error>(originalError);
       const transformed = errorResult.map_err(
@@ -253,7 +262,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("map_err() doesn't run transformation on Ok results", () => {
+    await t.test("map_err() doesn't run transformation on Ok results", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       const transformed = okResult.map_err(() => {
@@ -269,8 +278,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Pattern Matching", async (t) => {
-    t.test("match() executes on_ok callback for Ok results", () => {
+  await t.test("Pattern Matching", async (t) => {
+    await t.test("match() executes on_ok callback for Ok results", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       const matched = okResult.match({
@@ -281,7 +290,7 @@ test("Result", async (t) => {
       assert.strictEqual(matched, "Value is Hello");
     });
 
-    t.test("match() executes on_error callback for Error results", () => {
+    await t.test("match() executes on_error callback for Error results", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       const matched = errorResult.match({
@@ -293,8 +302,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Monadic Chaining", async (t) => {
-    t.test("and_then() chains Ok results through function", () => {
+  await t.test("Monadic Chaining", async (t) => {
+    await t.test("and_then() chains Ok results through function", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       const chained = okResult.and_then((v) =>
@@ -307,7 +316,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("and_then() short-circuits on Error results", () => {
+    await t.test("and_then() short-circuits on Error results", () => {
       const error = new Error("Test error");
       const errorResult = result.error<string, Error>(error);
       const chained = errorResult.and_then(() => {
@@ -322,7 +331,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("or_else() provides fallback for Error results", () => {
+    await t.test("or_else() provides fallback for Error results", () => {
       const originalError = new Error("Original error");
       const errorResult = result.error<string, Error>(originalError);
       const fallback = errorResult.or_else(() =>
@@ -335,7 +344,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("or_else() preserves Ok results unchanged", () => {
+    await t.test("or_else() preserves Ok results unchanged", () => {
       const value = "Hello";
       const okResult = result.ok<string, Error>(value);
       const fallback = okResult.or_else(() => {
@@ -351,8 +360,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Complex Chaining", async (t) => {
-    t.test("can chain multiple map operations", () => {
+  await t.test("Complex Chaining", async (t) => {
+    await t.test("can chain multiple map operations", () => {
       const chainedResult = result
         .ok<string, Error>("hello")
         .map((v) => v.toUpperCase())
@@ -365,7 +374,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("can chain map with and_then operations", () => {
+    await t.test("can chain map with and_then operations", () => {
       const chainedResult = result
         .ok<string, Error>("hello")
         .map((v) => v.toUpperCase())
@@ -378,7 +387,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("chains short-circuit on first error", () => {
+    await t.test("chains short-circuit on first error", () => {
       const error = new Error("Test error");
       const chainedResult = result
         .error<string, Error>(error)
@@ -400,8 +409,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Type System & Immutability", async (t) => {
-    t.test("has correct Symbol.toStringTag", () => {
+  await t.test("Type System & Immutability", async (t) => {
+    await t.test("has correct Symbol.toStringTag", () => {
       const okResult = result.ok<string, Error>("test");
       const errorResult = result.error<string, Error>(new Error("test"));
 
@@ -409,7 +418,7 @@ test("Result", async (t) => {
       assert.strictEqual(errorResult[Symbol.toStringTag], "Result");
     });
 
-    t.test("handles custom Error subclasses", () => {
+    await t.test("handles custom Error subclasses", () => {
       class CustomError extends Error {
         code: number;
         constructor(message: string, code: number) {
@@ -430,8 +439,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Generator/Iterator Interface", async (t) => {
-    t.test("Ok result yields its value in for-of loop", () => {
+  await t.test("Generator/Iterator Interface", async (t) => {
+    await t.test("Ok result yields its value in for-of loop", () => {
       const okResult = result.ok(42);
       const values: number[] = [];
 
@@ -443,7 +452,7 @@ test("Result", async (t) => {
       assert.strictEqual(values[0], 42);
     });
 
-    t.test("Error result yields nothing in for-of loop", () => {
+    await t.test("Error result yields nothing in for-of loop", () => {
       const errorResult = result.error<number, Error>(new Error("Failed"));
       const values: number[] = [];
 
@@ -454,7 +463,7 @@ test("Result", async (t) => {
       assert.strictEqual(values.length, 0);
     });
 
-    t.test("can collect successful values from array of results", () => {
+    await t.test("can collect successful values from array of results", () => {
       const results = [
         result.ok(1),
         result.error<number, Error>(new Error("Failed")),
@@ -473,7 +482,7 @@ test("Result", async (t) => {
       assert.deepStrictEqual(successfulValues, [1, 3, 5]);
     });
 
-    t.test("generator works with Array.from", () => {
+    await t.test("generator works with Array.from", () => {
       const okResult = result.ok("hello");
       const values = Array.from(okResult);
 
@@ -486,7 +495,7 @@ test("Result", async (t) => {
       assert.strictEqual(emptyValues.length, 0);
     });
 
-    t.test("generator works with spread operator", () => {
+    await t.test("generator works with spread operator", () => {
       const okResult = result.ok(100);
       const values = [...okResult];
 
@@ -499,7 +508,7 @@ test("Result", async (t) => {
       assert.strictEqual(emptyValues.length, 0);
     });
 
-    t.test("can be used with destructuring", () => {
+    await t.test("can be used with destructuring", () => {
       const okResult = result.ok("test");
       const [first, second] = okResult;
 
@@ -513,7 +522,7 @@ test("Result", async (t) => {
       assert.strictEqual(errorSecond, undefined);
     });
 
-    t.test("generator works with different value types", () => {
+    await t.test("generator works with different value types", () => {
       const stringResult = result.ok("hello");
       assert.deepStrictEqual([...stringResult], ["hello"]);
 
@@ -531,8 +540,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Function Wrapping API", async (t) => {
-    t.test("result.from() wraps successful function execution", () => {
+  await t.test("Function Wrapping API", async (t) => {
+    await t.test("result.from() wraps successful function execution", () => {
       const successFn = () => "success";
       const res = result.from(successFn);
 
@@ -542,7 +551,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.from() wraps function that throws Error", () => {
+    await t.test("result.from() wraps function that throws Error", () => {
       const throwingFn = () => {
         throw new Error("Test error");
       };
@@ -555,20 +564,24 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.from() wraps function that throws non-Error value", () => {
-      const throwingFn = () => {
-        throw "string error";
-      };
-      const res = result.from(throwingFn);
+    await t.test(
+      "result.from() wraps function that throws non-Error value",
+      () => {
+        const throwingFn = () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw "string error";
+        };
+        const res = result.from(throwingFn);
 
-      assert.ok(res.is_error());
-      if (res.is_error()) {
-        assert.strictEqual(res.error.message, "string error");
-        assert.ok(res.error instanceof Error);
-      }
-    });
+        assert.ok(res.is_error());
+        if (res.is_error()) {
+          assert.strictEqual(res.error.message, "string error");
+          assert.ok(res.error instanceof Error);
+        }
+      },
+    );
 
-    t.test("result.from() works with different return types", () => {
+    await t.test("result.from() works with different return types", () => {
       const numberResult = result.from(() => 42);
       assert.ok(numberResult.is_ok());
       if (numberResult.is_ok()) {
@@ -589,7 +602,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.from() preserves Error types", () => {
+    await t.test("result.from() preserves Error types", () => {
       const customError = new TypeError("Custom type error");
       const throwingFn = () => {
         throw customError;
@@ -603,19 +616,23 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("result.from_async() wraps successful async function", async () => {
-      const asyncSuccessFn = async () => "async success";
-      const res = await result.from_async(asyncSuccessFn);
+    await t.test(
+      "result.from_async() wraps successful async function",
+      async () => {
+        const asyncSuccessFn = () => Promise.resolve("async success");
+        const res = await result.from_async(asyncSuccessFn);
 
-      assert.ok(res.is_ok());
-      if (res.is_ok()) {
-        assert.strictEqual(res.value, "async success");
-      }
-    });
+        assert.ok(res.is_ok());
+        if (res.is_ok()) {
+          assert.strictEqual(res.value, "async success");
+        }
+      },
+    );
 
-    t.test(
+    await t.test(
       "result.from_async() wraps async function that rejects with Error",
       async () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         const asyncThrowingFn = async () => {
           throw new Error("Async error");
         };
@@ -629,10 +646,12 @@ test("Result", async (t) => {
       },
     );
 
-    t.test(
+    await t.test(
       "result.from_async() wraps async function that rejects with non-Error",
       async () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         const asyncThrowingFn = async () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
           throw "async string error";
         };
         const res = await result.from_async(asyncThrowingFn);
@@ -645,16 +664,18 @@ test("Result", async (t) => {
       },
     );
 
-    t.test(
+    await t.test(
       "result.from_async() works with different resolved types",
       async () => {
-        const numberResult = await result.from_async(async () => 42);
+        const numberResult = await result.from_async(() => Promise.resolve(42));
         assert.ok(numberResult.is_ok());
         if (numberResult.is_ok()) {
           assert.strictEqual(numberResult.value, 42);
         }
 
-        const arrayResult = await result.from_async(async () => [1, 2, 3]);
+        const arrayResult = await result.from_async(() =>
+          Promise.resolve([1, 2, 3]),
+        );
         assert.ok(arrayResult.is_ok());
         if (arrayResult.is_ok()) {
           assert.deepStrictEqual(arrayResult.value, [1, 2, 3]);
@@ -662,45 +683,55 @@ test("Result", async (t) => {
       },
     );
 
-    t.test("result.from_async() preserves async Error types", async () => {
-      const customError = new RangeError("Custom range error");
-      const asyncThrowingFn = async () => {
-        throw customError;
-      };
-      const res = await result.from_async(asyncThrowingFn);
+    await t.test(
+      "result.from_async() preserves async Error types",
+      async () => {
+        const customError = new RangeError("Custom range error");
+        // eslint-disable-next-line @typescript-eslint/require-await
+        const asyncThrowingFn = async () => {
+          throw customError;
+        };
+        const res = await result.from_async(asyncThrowingFn);
 
-      assert.ok(res.is_error());
-      if (res.is_error()) {
-        assert.strictEqual(res.error, customError);
-        assert.ok(res.error instanceof RangeError);
-      }
-    });
+        assert.ok(res.is_error());
+        if (res.is_error()) {
+          assert.strictEqual(res.error, customError);
+          assert.ok(res.error instanceof RangeError);
+        }
+      },
+    );
 
-    t.test("result.from_async() properly awaits async operations", async () => {
-      let counter = 0;
-      const asyncFn = async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        return ++counter;
-      };
+    await t.test(
+      "result.from_async() properly awaits async operations",
+      async () => {
+        let counter = 0;
+        const asyncFn = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return ++counter;
+        };
 
-      const res = await result.from_async(asyncFn);
-      assert.ok(res.is_ok());
-      if (res.is_ok()) {
-        assert.strictEqual(res.value, 1);
-        assert.strictEqual(counter, 1);
-      }
-    });
+        const res = await result.from_async(asyncFn);
+        assert.ok(res.is_ok());
+        if (res.is_ok()) {
+          assert.strictEqual(res.value, 1);
+          assert.strictEqual(counter, 1);
+        }
+      },
+    );
 
-    t.test(
+    await t.test(
       "result.from() and result.of_async() work with JSON parsing example",
       async () => {
         // Sync JSON parsing
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         const validJson = result.from(() => JSON.parse('{"name": "John"}'));
         assert.ok(validJson.is_ok());
         if (validJson.is_ok()) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           assert.strictEqual(validJson.value.name, "John");
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         const invalidJson = result.from(() => JSON.parse("invalid json"));
         assert.ok(invalidJson.is_error());
         if (invalidJson.is_error()) {
@@ -708,19 +739,20 @@ test("Result", async (t) => {
         }
 
         // Async version
-        const asyncValidJson = await result.from_async(async () =>
-          JSON.parse('{"age": 30}'),
+        const asyncValidJson = await result.from_async(() =>
+          Promise.resolve(JSON.parse('{"age": 30}')),
         );
         assert.ok(asyncValidJson.is_ok());
         if (asyncValidJson.is_ok()) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           assert.strictEqual(asyncValidJson.value.age, 30);
         }
       },
     );
   });
 
-  t.test("Retry Function", async (t) => {
-    t.test("returns Ok on first success", () => {
+  await t.test("Retry Function", async (t) => {
+    await t.test("returns Ok on first success", () => {
       let attempts = 0;
       const successFn = () => {
         attempts++;
@@ -735,7 +767,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 1);
     });
 
-    t.test("retries until success", () => {
+    await t.test("retries until success", () => {
       // Run the test 20 times with different random values
       for (let run = 1; run <= 20; run++) {
         let attempts = 0;
@@ -768,7 +800,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("fails after exhausting all retries", () => {
+    await t.test("fails after exhausting all retries", () => {
       let attempts = 0;
       const alwaysFailFn = (): Result<string, Error> => {
         attempts++;
@@ -800,14 +832,13 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 3);
     });
 
-    t.test("handles zero retries", () => {
+    await t.test("handles zero retries", () => {
       let attempts = 0;
       const failFn = (): Result<string, Error> => {
         attempts++;
         return result.error(new Error("Always fails"));
       };
 
-      // @ts-expect-error - Testing zero retries should produce type error for literal 0
       const retryResult = result.retry(failFn, 0);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
@@ -821,7 +852,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 0);
     });
 
-    t.test("handles zero retries from variable", () => {
+    await t.test("handles zero retries from variable", () => {
       let attempts = 0;
       const failFn = (): Result<string, Error> => {
         attempts++;
@@ -842,7 +873,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 0);
     });
 
-    t.test("handles single retry", () => {
+    await t.test("handles single retry", () => {
       let attempts = 0;
       const failOnceFn = (): Result<string, Error> => {
         attempts++;
@@ -869,7 +900,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 1);
     });
 
-    t.test("works with different value types", () => {
+    await t.test("works with different value types", () => {
       const numberFn = (): Result<number, Error> => result.ok(42);
       const numberResult = result.retry(numberFn, 1);
       assert.ok(numberResult.is_ok());
@@ -893,7 +924,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("works with different error types", () => {
+    await t.test("works with different error types", () => {
       class CustomError extends Error {
         code: number;
         constructor(message: string, code: number) {
@@ -922,18 +953,12 @@ test("Result", async (t) => {
         assert.strictEqual(retryResult.error.errors.length, 2);
         assert.ok(retryResult.error.errors[0] instanceof CustomError);
         assert.ok(retryResult.error.errors[1] instanceof CustomError);
-        assert.strictEqual(
-          (retryResult.error.errors[0] as CustomError).code,
-          501,
-        );
-        assert.strictEqual(
-          (retryResult.error.errors[1] as CustomError).code,
-          502,
-        );
+        assert.strictEqual(retryResult.error.errors[0].code, 501);
+        assert.strictEqual(retryResult.error.errors[1].code, 502);
       }
     });
 
-    t.test("preserves error collection across attempts", () => {
+    await t.test("preserves error collection across attempts", () => {
       const errors = [
         new Error("First error"),
         new TypeError("Second error"),
@@ -960,7 +985,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("can be chained with other Result operations", () => {
+    await t.test("can be chained with other Result operations", () => {
       let attempts = 0;
       const eventualSuccessFn = () => {
         attempts++;
@@ -981,8 +1006,9 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("retry error can be handled with match", () => {
-      const alwaysFailFn = () => result.error(new Error("Always fails"));
+    await t.test("retry error can be handled with match", () => {
+      const alwaysFailFn = () =>
+        result.error<string>(new Error("Always fails"));
 
       const retryResult = result.retry(alwaysFailFn, 2);
       const matchResult = retryResult.match({
@@ -998,8 +1024,8 @@ test("Result", async (t) => {
     });
   });
 
-  t.test("Retry Async Function", async (t) => {
-    t.test("returns Ok on first success", async () => {
+  await t.test("Retry Async Function", async (t) => {
+    await t.test("returns Ok on first success", async () => {
       let attempts = 0;
       const successFn = async () => {
         attempts++;
@@ -1015,7 +1041,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 1);
     });
 
-    t.test("retries until success", async () => {
+    await t.test("retries until success", async () => {
       // Run the test 20 times with different random values
       for (let run = 1; run <= 20; run++) {
         let attempts = 0;
@@ -1052,7 +1078,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("fails after exhausting all retries", async () => {
+    await t.test("fails after exhausting all retries", async () => {
       let attempts = 0;
       const alwaysFailFn = async () => {
         attempts++;
@@ -1085,7 +1111,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 3);
     });
 
-    t.test("handles zero retries", async () => {
+    await t.test("handles zero retries", async () => {
       let attempts = 0;
       const failFn = async () => {
         attempts++;
@@ -1093,7 +1119,6 @@ test("Result", async (t) => {
         return result.error(new Error("Always fails"));
       };
 
-      // @ts-expect-error - Testing zero retries should produce type error for literal 0
       const retryResult = await result.retry_async(failFn, 0);
       assert.ok(retryResult.is_error());
       if (retryResult.is_error()) {
@@ -1107,7 +1132,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 0);
     });
 
-    t.test("handles zero retries from variable", async () => {
+    await t.test("handles zero retries from variable", async () => {
       let attempts = 0;
       const failFn = async () => {
         attempts++;
@@ -1129,7 +1154,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 0);
     });
 
-    t.test("handles single retry", async () => {
+    await t.test("handles single retry", async () => {
       let attempts = 0;
       const failOnceFn = async () => {
         attempts++;
@@ -1157,7 +1182,7 @@ test("Result", async (t) => {
       assert.strictEqual(attempts, 1);
     });
 
-    t.test("works with different value types", async () => {
+    await t.test("works with different value types", async () => {
       const numberFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 1));
         return result.ok(42);
@@ -1189,7 +1214,7 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("works with different error types", async () => {
+    await t.test("works with different error types", async () => {
       class CustomAsyncError extends Error {
         statusCode: number;
         constructor(message: string, statusCode: number) {
@@ -1224,46 +1249,43 @@ test("Result", async (t) => {
         assert.strictEqual(retryResult.error.errors.length, 2);
         assert.ok(retryResult.error.errors[0] instanceof CustomAsyncError);
         assert.ok(retryResult.error.errors[1] instanceof CustomAsyncError);
-        assert.strictEqual(
-          (retryResult.error.errors[0] as CustomAsyncError).statusCode,
-          401,
-        );
-        assert.strictEqual(
-          (retryResult.error.errors[1] as CustomAsyncError).statusCode,
-          402,
-        );
+        assert.strictEqual(retryResult.error.errors[0].statusCode, 401);
+        assert.strictEqual(retryResult.error.errors[1].statusCode, 402);
       }
     });
 
-    t.test("preserves error collection across async attempts", async () => {
-      const errors = [
-        new Error("First async error"),
-        new TypeError("Second async error"),
-        new RangeError("Third async error"),
-      ];
-      let attempts = 0;
+    await t.test(
+      "preserves error collection across async attempts",
+      async () => {
+        const errors = [
+          new Error("First async error"),
+          new TypeError("Second async error"),
+          new RangeError("Third async error"),
+        ];
+        let attempts = 0;
 
-      const multiErrorFn = async () => {
-        const error = errors[attempts];
-        attempts++;
-        await new Promise((resolve) => setTimeout(resolve, 1));
-        return result.error(error!);
-      };
+        const multiErrorFn = async () => {
+          const error = errors[attempts];
+          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          return result.error(error!);
+        };
 
-      const retryResult = await result.retry_async(multiErrorFn, 3);
-      assert.ok(retryResult.is_error());
-      if (retryResult.is_error()) {
-        assert.strictEqual(retryResult.error.errors.length, 3);
-        assert.strictEqual(retryResult.error.errors[0], errors[0]);
-        assert.strictEqual(retryResult.error.errors[1], errors[1]);
-        assert.strictEqual(retryResult.error.errors[2], errors[2]);
-        assert.ok(retryResult.error.errors[0] instanceof Error);
-        assert.ok(retryResult.error.errors[1] instanceof TypeError);
-        assert.ok(retryResult.error.errors[2] instanceof RangeError);
-      }
-    });
+        const retryResult = await result.retry_async(multiErrorFn, 3);
+        assert.ok(retryResult.is_error());
+        if (retryResult.is_error()) {
+          assert.strictEqual(retryResult.error.errors.length, 3);
+          assert.strictEqual(retryResult.error.errors[0], errors[0]);
+          assert.strictEqual(retryResult.error.errors[1], errors[1]);
+          assert.strictEqual(retryResult.error.errors[2], errors[2]);
+          assert.ok(retryResult.error.errors[0] instanceof Error);
+          assert.ok(retryResult.error.errors[1] instanceof TypeError);
+          assert.ok(retryResult.error.errors[2] instanceof RangeError);
+        }
+      },
+    );
 
-    t.test("can be chained with other Result operations", async () => {
+    await t.test("can be chained with other Result operations", async () => {
       let attempts = 0;
       const eventualSuccessFn = async () => {
         attempts++;
@@ -1285,13 +1307,16 @@ test("Result", async (t) => {
       }
     });
 
-    t.test("retry async error can be handled with match", async () => {
+    await t.test("retry async error can be handled with match", async () => {
       const alwaysFailFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 1));
-        return result.error(new Error("Always fails"));
+        return result.error<string>(new Error("Always fails"));
       };
 
-      const retryResult = await result.retry_async(alwaysFailFn, 2);
+      const retryResult = await result.retry_async<string, Error>(
+        alwaysFailFn,
+        2,
+      );
       const matchResult = retryResult.match({
         on_ok: (value) => `Success: ${value}`,
         on_error: (error) =>
@@ -1304,7 +1329,7 @@ test("Result", async (t) => {
       );
     });
 
-    t.test("handles promise rejections gracefully", async () => {
+    await t.test("handles promise rejections gracefully", async () => {
       let attempts = 0;
       const rejectingFn = async () => {
         attempts++;
@@ -1321,11 +1346,11 @@ test("Result", async (t) => {
         assert.fail("Should have thrown due to promise rejection");
       } catch (error) {
         assert.ok(error instanceof Error);
-        assert.strictEqual((error as Error).message, "Promise rejected");
+        assert.strictEqual(error.message, "Promise rejected");
       }
     });
 
-    t.test("maintains proper async execution order", async () => {
+    await t.test("maintains proper async execution order", async () => {
       const executionOrder: number[] = [];
       let attempts = 0;
 
@@ -1345,7 +1370,7 @@ test("Result", async (t) => {
       assert.deepStrictEqual(executionOrder, [1, 11, 2, 12]);
     });
 
-    t.test("works with Promise.all-like patterns", async () => {
+    await t.test("works with Promise.all-like patterns", async () => {
       let attempts1 = 0;
       let attempts2 = 0;
 

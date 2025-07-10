@@ -8,71 +8,102 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import type { TSESLint } from '@typescript-eslint/utils';
-import parser from '@typescript-eslint/parser';
-import typescriptEslint from '@typescript-eslint/eslint-plugin';
-import { enforceOptionalUsage } from './src/optional/lint.ts';
-import { enforceResultUsage } from './src/result/lint.ts';
+import tseslint from "typescript-eslint";
+import { enforceOptionalUsage } from "./src/optional/lint.ts";
+import { enforceResultUsage } from "./src/result/lint.ts";
 
 /**
  * ESLint 9 flat configuration for typesafe-ts with custom TypeScript monadic rules.
- * 
+ *
  * This configuration demonstrates how to use the custom ESLint rules that enforce
  * Optional and Result usage patterns for type-safe functional programming.
  */
 // Define the custom plugin once
 const tsUtilsPlugin = {
   rules: {
-    'enforce-optional-usage': enforceOptionalUsage,
-    'enforce-result-usage': enforceResultUsage,
+    "enforce-optional-usage": enforceOptionalUsage,
+    "enforce-result-usage": enforceResultUsage,
   },
 };
 
-const config: TSESLint.FlatConfig.ConfigArray = [
+export default tseslint.config(
+  tseslint.configs.recommendedTypeChecked,
+  
+  // Configuration for source files
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     languageOptions: {
-      parser: parser,
       parserOptions: {
         ecmaVersion: 2020,
-        sourceType: 'module',
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+        sourceType: "module",
       },
     },
     plugins: {
-      'typesafe-ts': tsUtilsPlugin,
-      '@typescript-eslint': typescriptEslint,
+      "typesafe-ts": tsUtilsPlugin,
     },
     rules: {
       // Disallow explicit any types
-      '@typescript-eslint/no-explicit-any': 'error',
-      
+      "@typescript-eslint/no-explicit-any": "error",
+
       // Enforce Optional usage instead of nullable unions
-      'typesafe-ts/enforce-optional-usage': ['error', {
-        allowExceptions: [], // Add function names to exclude
-        autoFix: true,
-      }],
-      
+      "typesafe-ts/enforce-optional-usage": [
+        "error",
+        {
+          allowExceptions: [], // Add function names to exclude
+          autoFix: true,
+        },
+      ],
+
       // Enforce Result usage instead of throw/try-catch
-      'typesafe-ts/enforce-result-usage': ['error', {
-        allowExceptions: [], // Add function names to exclude
-        allowTestFiles: true, // Allow throw/try-catch in test files
-        autoFix: true,
-      }],
+      "typesafe-ts/enforce-result-usage": [
+        "error",
+        {
+          allowExceptions: [], // Add function names to exclude
+          allowTestFiles: true, // Allow throw/try-catch in test files
+          autoFix: true,
+        },
+      ],
     },
   },
-  
+
+  // Configuration for root config files
+  {
+    files: ["*.ts"],
+    languageOptions: {
+      parserOptions: {
+        ecmaVersion: 2020,
+        project: "./tsconfig.config.json",
+        tsconfigRootDir: import.meta.dirname,
+        sourceType: "module",
+      },
+    },
+    rules: {
+      // Disable custom rules for config files
+      "typesafe-ts/enforce-optional-usage": "off",
+      "typesafe-ts/enforce-result-usage": "off",
+    },
+  },
+
   // Configuration for test files with more relaxed rules
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts', '**/tests/**/*.ts'],
+    files: [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/test/**/*.ts",
+      "**/tests/**/*.ts",
+    ],
     rules: {
       // More lenient rules for test files
-      'typesafe-ts/enforce-optional-usage': 'warn',
-      'typesafe-ts/enforce-result-usage': ['warn', {
-        allowTestFiles: true,
-        autoFix: false, // Don't auto-fix in test files
-      }],
+      "typesafe-ts/enforce-optional-usage": "warn",
+      "typesafe-ts/enforce-result-usage": [
+        "warn",
+        {
+          allowTestFiles: true,
+          autoFix: false, // Don't auto-fix in test files
+        },
+      ],
     },
   },
-];
-
-export default config;
+);

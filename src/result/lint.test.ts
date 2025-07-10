@@ -14,7 +14,9 @@ import { enforceResultUsage } from "./lint.ts";
 
 // Configure RuleTester for Node.js test environment
 RuleTester.afterAll = () => { };
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.it = test;
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.describe = (name: string, fn: () => void) => test(name, fn);
 
 const ruleTester = new RuleTester({

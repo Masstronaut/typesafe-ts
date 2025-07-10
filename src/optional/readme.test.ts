@@ -21,8 +21,8 @@ interface Comment {
   author: string;
 }
 
-test("Readme examples work correctly", async (t) => {
-  t.test("Optional-based post and comments system", () => {
+await test("Readme examples work correctly", async (t) => {
+  await t.test("Optional-based post and comments system", () => {
     // Mock data
     const users: User[] = [
       { id: "1", username: "alice" },
@@ -54,8 +54,9 @@ test("Readme examples work correctly", async (t) => {
       return optional.none();
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     function getPostComments(_postId: string): Optional<Comment[]> {
-      const postComments = comments.filter((_) => true); // All comments for simplicity
+      const postComments = comments.filter(() => true); // All comments for simplicity
       return postComments.length > 0
         ? optional.some(postComments)
         : optional.none();

@@ -337,16 +337,6 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
   errors: ErrorType[];
 }
 
-const zeroRetriesError = Symbol("Zero Retries Error");
-type ZeroRetriesError = typeof zeroRetriesError;
-
-type ZeroRetriesErrorMessage =
-  "Type Error: You passed 0 retries, but retry functions require at least 1 attempt. If you want to try an operation exactly once, call the function directly instead of using retry.";
-
-type ValidRetryCount<T extends number> = T extends 0
-  ? ZeroRetriesErrorMessage | ZeroRetriesError
-  : T;
-
 class ResultImpl<ResultType, ErrorType extends Error>
   implements IResult<ResultType, ErrorType> {
   value: ResultType | NoneType;
@@ -516,7 +506,9 @@ const result = {
    * console.log(numberValue.value_or(0)); // 42
    * ```
    */
-  ok: ResultImpl.ok,
+  ok: <ResultType, ErrorType extends Error = Error>(
+    value: ResultType,
+  ): Result<ResultType, ErrorType> => ResultImpl.ok(value),
 
   /**
    * Creates a failed Result containing the provided error.
@@ -554,7 +546,9 @@ const result = {
    * }
    * ```
    */
-  error: ResultImpl.error,
+  error: <ResultType, ErrorType extends Error = Error>(
+    error: ErrorType,
+  ): Result<ResultType, ErrorType> => ResultImpl.error(error),
 
   /**
    * Executes a function and wraps the result in a Result type.
@@ -698,9 +692,9 @@ const result = {
    *   .and_then(data => data.includes("SUCCESS") ? result.ok(data) : result.error(new Error("Invalid data")));
    * ```
    */
-  retry: <ValueType, ErrorType extends Error, RetriesType extends number>(
+  retry: <ValueType, ErrorType extends Error>(
     fn: () => Result<ValueType, ErrorType>,
-    retries: ValidRetryCount<RetriesType>,
+    retries: number,
   ): Result<ValueType, RetryError<ErrorType>> => {
     if (typeof retries !== "number" || retries <= 0) {
       return ResultImpl.error<ValueType, RetryError<ErrorType>>({
@@ -781,13 +775,9 @@ const result = {
    *   ));
    * ```
    */
-  retry_async: async <
-    ValueType,
-    ErrorType extends Error,
-    RetriesType extends number,
-  >(
+  retry_async: async <ValueType, ErrorType extends Error>(
     fn: () => Promise<Result<ValueType, ErrorType>>,
-    retries: ValidRetryCount<RetriesType>,
+    retries: number,
   ): Promise<Result<ValueType, RetryError<ErrorType>>> => {
     if (typeof retries !== "number" || retries <= 0) {
       return Promise.resolve(
