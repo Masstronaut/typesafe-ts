@@ -95,7 +95,7 @@ test(optional): add comprehensive tests for filter method
 
 - `optional`: Changes to Optional utility
 - `result`: Changes to Result utility
-- `lint`: Changes to ESLint rules
+- `lint`: Changes to ESLint or commit lint rules
 - `build`: Changes to build configuration
 - `ci`: Changes to CI/CD pipeline
 
