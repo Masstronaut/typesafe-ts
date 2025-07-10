@@ -9,10 +9,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 
 /**
- * ts-utils: TypeScript utilities for functional programming
+ * typesafe-ts: TypeScript utilities for writing safer, more correct code
  *
- * This package provides monadic types and utilities for type-safe functional programming
- * in TypeScript, along with ESLint rules to enforce their usage.
+ * This package provides monadic types and utilities that help prevent common runtime errors
+ * by making potential failures explicit in the type system, along with ESLint rules to enforce their usage.
  */
 
 // Export Optional monad and related utilities

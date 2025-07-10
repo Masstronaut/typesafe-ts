@@ -1,0 +1,50 @@
+name: 'Test and Validate'
+description: 'Run comprehensive testing, linting, and type checking'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '24'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+      
+    - name: Run linting
+      run: npm run lint
+      shell: bash
+      
+    - name: Run type checking
+      run: npm run typecheck
+      shell: bash
+      
+    - name: Run tests with coverage
+      run: npm run test --color=always 2>&1 | tee test-output.log
+      shell: bash
+      
+    - name: Check 100% coverage
+      run: |
+        # Extract coverage percentage from test output
+        COVERAGE=$(grep "all files" test-output.log | grep -o '[0-9]\+\.[0-9]\+' | head -1)
+        echo "Coverage: $COVERAGE%"
+        if [ -z "$COVERAGE" ]; then
+          echo "Error: Could not parse coverage from output"
+          cat test-output.log
+          exit 1
+        fi
+        if [ $(echo "$COVERAGE < 100" | awk '{print ($1 < $3)}') -eq 1 ]; then
+          echo "Error: Test coverage is $COVERAGE%, but 100% is required"
+          exit 1
+        fi
+        echo "✓ 100% test coverage achieved"
+      shell: bash

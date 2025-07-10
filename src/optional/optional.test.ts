@@ -277,7 +277,7 @@ test("Optional", async (t) => {
 
     t.test("works with functions that conditionally return null", () => {
       // Need this fn to return null to test that optional.from() works correctly
-      // eslint-disable-next-line ts-utils/enforce-optional-usage
+      // eslint-disable-next-line typesafe-ts/enforce-optional-usage
       function findItem(id: number): string | null {
         return id === 1 ? "found" : null;
       }
@@ -292,7 +292,7 @@ test("Optional", async (t) => {
 
     t.test("works with DOM-like APIs", () => {
       const mockDocument = {
-        // eslint-disable-next-line ts-utils/enforce-optional-usage
+        // eslint-disable-next-line typesafe-ts/enforce-optional-usage
         getElementById: (id: string) => (id === "exists" ? { id } : null),
       };
 
@@ -375,7 +375,7 @@ test("Optional", async (t) => {
         if (url === "/api/success") {
           return { ok: true, json: async () => ({ data: "success" }) };
         }
-        // eslint-disable-next-line ts-utils/enforce-optional-usage
+        // eslint-disable-next-line typesafe-ts/enforce-optional-usage
         return { ok: false, json: async () => null };
       };
 

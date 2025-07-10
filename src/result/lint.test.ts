@@ -13,7 +13,7 @@ import { RuleTester } from "@typescript-eslint/rule-tester";
 import { enforceResultUsage } from "./lint.ts";
 
 // Configure RuleTester for Node.js test environment
-RuleTester.afterAll = () => {};
+RuleTester.afterAll = () => { };
 RuleTester.it = test;
 RuleTester.describe = (name: string, fn: () => void) => test(name, fn);
 
@@ -21,7 +21,7 @@ const ruleTester = new RuleTester({
   languageOptions: {
     parserOptions: {
       ecmaVersion: 2020,
-      sourceType: 'module',
+      sourceType: "module",
     },
   },
 });
@@ -99,7 +99,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const result = obj[methodName]();`,
     },
     {
-      name: "Non-throwing member expressions are valid", 
+      name: "Non-throwing member expressions are valid",
       code: `const max = Math.max(1, 2, 3);`,
     },
     {
@@ -111,7 +111,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const trimmed = String.prototype.trim.call("  test  ");`,
     },
     {
-      name: "Call expression outside try block should exercise isInsideTryBlock false path", 
+      name: "Call expression outside try block should exercise isInsideTryBlock false path",
       code: `function test() { const data = Math.random(); }`,
     },
     {
@@ -128,6 +128,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
         throw new Error("Exact match exception");
       }`,
       options: [{ allowExceptions: ["exactName"] }],
+    },
+    {
+      name: "Arrow functions returning null can be used inside result.from()",
+      code: `const nullResult = result.from(() => null);`,
     },
   ],
 

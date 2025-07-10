@@ -41,6 +41,7 @@ test("Readme examples work correctly", async (t) => {
     ];
 
     function getUserByUsername(username: string): Optional<User> {
+      // eslint-disable-next-line typesafe-ts/enforce-optional-usage
       const user = users.find((u) => u.username === username);
       return user ? optional.some(user) : optional.none();
     }

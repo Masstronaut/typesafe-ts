@@ -17,11 +17,21 @@
     "noImplicitOverride": true,
     "allowUnreachableCode": false,
     "noImplicitAny": true,
-    /* Node Stuff */
+    /* Flexible for dev and build */
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "module": "NodeNext",
-    "noEmit": true
-  }
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    /* Build options (overridden by CLI) */
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

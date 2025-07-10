@@ -581,6 +581,7 @@ test("Result", async (t) => {
         assert.deepStrictEqual(objectResult.value, { name: "test" });
       }
 
+      // eslint-disable-next-line typesafe-ts/enforce-optional-usage
       const nullResult = result.from(() => null);
       assert.ok(nullResult.is_ok());
       if (nullResult.is_ok()) {

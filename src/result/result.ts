@@ -56,7 +56,7 @@ interface OkResult<ResultType> {
 /**
  * Common methods available on all Result instances.
  */
-interface ResultMethods<ResultType, ErrorType extends Error> {
+interface IResult<ResultType, ErrorType extends Error> {
   /**
    * Returns the string tag for Object.prototype.toString calls.
    * Always returns "Result" for Result instances.
@@ -314,9 +314,15 @@ interface ResultMethods<ResultType, ErrorType extends Error> {
   [Symbol.iterator](): Generator<ResultType, void, unknown>;
 }
 
-type Result<ResultType, ErrorType extends Error> =
-  | (ResultMethods<ResultType, ErrorType> & OkResult<ResultType>)
-  | (ResultMethods<ResultType, ErrorType> & ErrorResult<ErrorType>);
+/**
+ * @inlineType
+ * @interface
+ */
+type Result<ResultType, ErrorType extends Error> = IResult<
+  ResultType,
+  ErrorType
+> &
+  (OkResult<ResultType> | ErrorResult<ErrorType>);
 
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
@@ -342,7 +348,7 @@ type ValidRetryCount<T extends number> = T extends 0
   : T;
 
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements ResultMethods<ResultType, ErrorType> {
+  implements IResult<ResultType, ErrorType> {
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -353,7 +359,7 @@ class ResultImpl<ResultType, ErrorType extends Error>
       this.error = result.error;
       this.value = none_value;
     } else {
-      // eslint-disable-next-line ts-utils/enforce-result-usage
+      // eslint-disable-next-line typesafe-ts/enforce-result-usage
       throw new TypeError(
         "Result must be constructed with either an 'ok' or 'error' property.",
       );
@@ -460,6 +466,13 @@ class ResultImpl<ResultType, ErrorType extends Error>
  * Factory functions for creating Result instances.
  * This module provides the primary API for constructing Result values.
  *
+ * @property {function} ok - Creates a successful Result containing the provided value
+ * @property {function} error - Creates a failed Result containing the provided error
+ * @property {function} from - Executes a function and wraps the result in a Result type
+ * @property {function} from_async - Executes an async function and wraps the result in a Result type
+ * @property {function} retry - Retries a Result-returning function multiple times until success
+ * @property {function} retry_async - Retries an async Result-returning function multiple times until success
+ *
  * @example
  * ```typescript
  * import { result, type Result } from "./result.ts";
@@ -480,7 +493,7 @@ class ResultImpl<ResultType, ErrorType extends Error>
  *   .and_then(str => str.length > 0 ? result.ok(str) : result.error(new Error("Empty string")));
  * ```
  */
-const result = Object.freeze({
+const result = {
   /**
    * Creates a successful Result containing the provided value.
    * The value can be of any type, including null and undefined.
@@ -580,7 +593,7 @@ const result = Object.freeze({
    */
   from: <T>(fn: () => T): Result<T, Error> => {
     // need to use try/catch to wrap throwing functions in results.
-    // eslint-disable-next-line ts-utils/enforce-result-usage
+    // eslint-disable-next-line typesafe-ts/enforce-result-usage
     try {
       return ResultImpl.ok(fn());
     } catch (error) {
@@ -626,7 +639,7 @@ const result = Object.freeze({
    */
   from_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
     // need to use try/catch to wrap throwing functions in results.
-    // eslint-disable-next-line ts-utils/enforce-result-usage
+    // eslint-disable-next-line typesafe-ts/enforce-result-usage
     try {
       const value = await fn();
       return ResultImpl.ok(value);
@@ -804,6 +817,8 @@ const result = Object.freeze({
       errors: errors,
     } as RetryError<ErrorType>);
   },
-});
+};
+
+Object.freeze(result);
 
 export { result, type Result, type RetryError };

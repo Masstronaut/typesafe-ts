@@ -8,7 +8,11 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import { ESLintUtils, TSESTree } from "@typescript-eslint/utils";
+import {
+  AST_NODE_TYPES,
+  ESLintUtils,
+  TSESTree,
+} from "@typescript-eslint/utils";
 
 type Options = [
   {
@@ -21,7 +25,7 @@ type MessageIds = "noNullableReturn" | "useOptionalFrom" | "noNullableUnion";
 
 const createRule = ESLintUtils.RuleCreator(
   () =>
-    `https://github.com/masstronaut/ts-utils/blob/main/src/optional/readme.md`,
+    `https://github.com/masstronaut/typesafe-ts/blob/main/src/optional/readme.md`,
 );
 
 /**
@@ -75,19 +79,20 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     function isNullableUnion(node: TSESTree.TSTypeAnnotation): boolean {
       // Check for standalone null or undefined types
       if (
-        node.typeAnnotation.type === "TSNullKeyword" ||
-        node.typeAnnotation.type === "TSUndefinedKeyword"
+        node.typeAnnotation.type === AST_NODE_TYPES.TSNullKeyword ||
+        node.typeAnnotation.type === AST_NODE_TYPES.TSUndefinedKeyword
       ) {
         return true;
       }
 
       // Check for union types containing null or undefined
-      if (node.typeAnnotation.type !== "TSUnionType") return false;
+      if (node.typeAnnotation.type !== AST_NODE_TYPES.TSUnionType) return false;
 
       const union = node.typeAnnotation;
       return union.types.some(
         (type) =>
-          type.type === "TSNullKeyword" || type.type === "TSUndefinedKeyword",
+          type.type === AST_NODE_TYPES.TSNullKeyword ||
+          type.type === AST_NODE_TYPES.TSUndefinedKeyword,
       );
     }
 
@@ -95,30 +100,34 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       typeAnnotation: TSESTree.TSTypeAnnotation,
     ): string {
       // Handle standalone null/undefined types
-      if (typeAnnotation.typeAnnotation.type !== "TSUnionType") {
+      if (typeAnnotation.typeAnnotation.type !== AST_NODE_TYPES.TSUnionType) {
         return "T"; // Fallback for other types
       }
 
       const union = typeAnnotation.typeAnnotation;
       const nonNullTypes = union.types.filter(
         (type) =>
-          type.type !== "TSNullKeyword" && type.type !== "TSUndefinedKeyword",
+          type.type !== AST_NODE_TYPES.TSNullKeyword &&
+          type.type !== AST_NODE_TYPES.TSUndefinedKeyword,
       );
 
       if (nonNullTypes.length === 1) {
         const type = nonNullTypes[0];
         if (
           type &&
-          type.type === "TSTypeReference" &&
+          type.type === AST_NODE_TYPES.TSTypeReference &&
           "typeName" in type &&
           type.typeName &&
-          type.typeName.type === "Identifier"
+          type.typeName.type === AST_NODE_TYPES.Identifier
         ) {
           return type.typeName.name;
         }
-        if (type && type.type === "TSStringKeyword") return "string";
-        if (type && type.type === "TSNumberKeyword") return "number";
-        if (type && type.type === "TSBooleanKeyword") return "boolean";
+        if (type && type.type === AST_NODE_TYPES.TSStringKeyword)
+          return "string";
+        if (type && type.type === AST_NODE_TYPES.TSNumberKeyword)
+          return "number";
+        if (type && type.type === AST_NODE_TYPES.TSBooleanKeyword)
+          return "boolean";
       }
       return "T";
     }
@@ -138,11 +147,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       while (parent) {
         if (
-          parent.type === "CallExpression" &&
-          parent.callee.type === "MemberExpression" &&
-          parent.callee.object.type === "Identifier" &&
+          parent.type === AST_NODE_TYPES.CallExpression &&
+          parent.callee.type === AST_NODE_TYPES.MemberExpression &&
+          parent.callee.object.type === AST_NODE_TYPES.Identifier &&
           parent.callee.object.name === "optional" &&
-          parent.callee.property.type === "Identifier" &&
+          parent.callee.property.type === AST_NODE_TYPES.Identifier &&
           (parent.callee.property.name === "from" ||
             parent.callee.property.name === "from_async")
         ) {
@@ -165,7 +174,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       // Use context.sourceCode.visitorKeys for type-safe traversal
       function traverse(node: TSESTree.Node): void {
-        if (node.type === "ReturnStatement") {
+        if (node.type === AST_NODE_TYPES.ReturnStatement) {
           returnStatements.push(node);
           return; // Don't traverse into the return expression
         }
@@ -173,9 +182,9 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         // Don't traverse into nested functions
         if (
           node !== functionNode &&
-          (node.type === "FunctionDeclaration" ||
-            node.type === "FunctionExpression" ||
-            node.type === "ArrowFunctionExpression")
+          (node.type === AST_NODE_TYPES.FunctionDeclaration ||
+            node.type === AST_NODE_TYPES.FunctionExpression ||
+            node.type === AST_NODE_TYPES.ArrowFunctionExpression)
         ) {
           return;
         }
@@ -211,12 +220,12 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     ): boolean {
       // Special handling for arrow functions with implicit returns
       if (
-        functionNode.type === "ArrowFunctionExpression" &&
+        functionNode.type === AST_NODE_TYPES.ArrowFunctionExpression &&
         functionNode.body &&
-        functionNode.body.type !== "BlockStatement"
+        functionNode.body.type !== AST_NODE_TYPES.BlockStatement
       ) {
         // Arrow function with implicit return - check the body directly
-        return containsNullableValue(functionNode.body as TSESTree.Expression);
+        return containsNullableValue(functionNode.body);
       }
 
       const returnStatements = collectReturnStatements(functionNode);
@@ -252,17 +261,20 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       if (!node) return false;
 
       // Check for literal null
-      if (node.type === "Literal" && node.value === null) {
+      if (node.type === AST_NODE_TYPES.Literal && node.value === null) {
         return true;
       }
 
       // Check for undefined identifier
-      if (node.type === "Identifier" && node.name === "undefined") {
+      if (
+        node.type === AST_NODE_TYPES.Identifier &&
+        node.name === "undefined"
+      ) {
         return true;
       }
 
       // Check for conditional expressions (ternary operator)
-      if (node.type === "ConditionalExpression") {
+      if (node.type === AST_NODE_TYPES.ConditionalExpression) {
         return (
           containsNullableValue(node.consequent) ||
           containsNullableValue(node.alternate)
@@ -270,7 +282,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       }
 
       // Check for logical expressions (&&, ||)
-      if (node.type === "LogicalExpression") {
+      if (node.type === AST_NODE_TYPES.LogicalExpression) {
         return (
           containsNullableValue(node.left) || containsNullableValue(node.right)
         );
@@ -287,14 +299,12 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     ): string {
       // Special handling for arrow functions with implicit returns
       if (
-        functionNode.type === "ArrowFunctionExpression" &&
+        functionNode.type === AST_NODE_TYPES.ArrowFunctionExpression &&
         functionNode.body &&
-        functionNode.body.type !== "BlockStatement"
+        functionNode.body.type !== AST_NODE_TYPES.BlockStatement
       ) {
         // Arrow function with implicit return - analyze the body directly
-        const nonNullableType = extractNonNullableType(
-          functionNode.body as TSESTree.Expression,
-        );
+        const nonNullableType = extractNonNullableType(functionNode.body);
         if (nonNullableType !== "T") {
           return nonNullableType;
         }
@@ -322,29 +332,38 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       // Skip null and undefined
       if (
-        (node.type === "Literal" && node.value === null) ||
-        (node.type === "Identifier" && node.name === "undefined")
+        (node.type === AST_NODE_TYPES.Literal && node.value === null) ||
+        (node.type === AST_NODE_TYPES.Identifier && node.name === "undefined")
       ) {
         return "T";
       }
 
       // For literal strings
-      if (node.type === "Literal" && typeof node.value === "string") {
+      if (
+        node.type === AST_NODE_TYPES.Literal &&
+        typeof node.value === "string"
+      ) {
         return "string";
       }
 
       // For literal numbers
-      if (node.type === "Literal" && typeof node.value === "number") {
+      if (
+        node.type === AST_NODE_TYPES.Literal &&
+        typeof node.value === "number"
+      ) {
         return "number";
       }
 
       // For literal booleans
-      if (node.type === "Literal" && typeof node.value === "boolean") {
+      if (
+        node.type === AST_NODE_TYPES.Literal &&
+        typeof node.value === "boolean"
+      ) {
         return "boolean";
       }
 
       // For conditional expressions, try both branches
-      if (node.type === "ConditionalExpression") {
+      if (node.type === AST_NODE_TYPES.ConditionalExpression) {
         const consequentType = extractNonNullableType(node.consequent);
         if (consequentType !== "T") return consequentType;
 
@@ -353,7 +372,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       }
 
       // For logical expressions
-      if (node.type === "LogicalExpression") {
+      if (node.type === AST_NODE_TYPES.LogicalExpression) {
         const leftType = extractNonNullableType(node.left);
         if (leftType !== "T") return leftType;
 
@@ -366,7 +385,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
     // Helper function to detect String.prototype.match calls
     function isStringMatchCall(node: TSESTree.CallExpression): boolean {
-      if (node.callee.type !== "MemberExpression") return false;
+      if (node.callee.type !== AST_NODE_TYPES.MemberExpression) return false;
 
       // String.match() typically takes a RegExp or string as first argument
       // This is a heuristic to identify string match vs other match methods
@@ -377,17 +396,17 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       return (
         // RegExp literal: /pattern/
-        (firstArg.type === "Literal" &&
+        (firstArg.type === AST_NODE_TYPES.Literal &&
           "regex" in firstArg &&
           firstArg.regex !== undefined) ||
         // String literal: "pattern"
-        (firstArg.type === "Literal" &&
+        (firstArg.type === AST_NODE_TYPES.Literal &&
           "value" in firstArg &&
           typeof firstArg.value === "string") ||
         // Template literal: `pattern`
-        firstArg.type === "TemplateLiteral" ||
+        firstArg.type === AST_NODE_TYPES.TemplateLiteral ||
         // Variable that might be a RegExp/string (less certain but common)
-        firstArg.type === "Identifier"
+        firstArg.type === AST_NODE_TYPES.Identifier
       );
     }
 
@@ -416,16 +435,16 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
         // Skip if this is a method function (handled by parent MethodDefinition selector)
         if (
-          node.type === "FunctionExpression" &&
-          node.parent?.type === "MethodDefinition"
+          node.type === AST_NODE_TYPES.FunctionExpression &&
+          node.parent?.type === AST_NODE_TYPES.MethodDefinition
         ) {
           return;
         }
 
         const functionName =
-          (node.type === "FunctionDeclaration" && node.id?.name) ||
-          (node.parent?.type === "VariableDeclarator" &&
-            node.parent.id.type === "Identifier" &&
+          (node.type === AST_NODE_TYPES.FunctionDeclaration && node.id?.name) ||
+          (node.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+            node.parent.id.type === AST_NODE_TYPES.Identifier &&
             node.parent.id.name) ||
           "anonymous";
 
@@ -447,12 +466,17 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       // Check method return types
       MethodDefinition(node: TSESTree.MethodDefinition) {
-        if (node.value.type !== "FunctionExpression" || !node.value.returnType)
+        if (
+          node.value.type !== AST_NODE_TYPES.FunctionExpression ||
+          !node.value.returnType
+        )
           return;
         if (!isNullableUnion(node.value.returnType)) return;
 
         const methodName =
-          node.key.type === "Identifier" ? node.key.name : "method";
+          node.key.type === AST_NODE_TYPES.Identifier
+            ? node.key.name
+            : "method";
         if (isExceptionFunction(methodName)) return;
 
         const baseType = getNonNullableType(node.value.returnType);
@@ -471,7 +495,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       "VariableDeclarator[id.typeAnnotation]"(
         node: TSESTree.VariableDeclarator,
       ) {
-        if (node.id.type !== "Identifier" || !node.id.typeAnnotation) return;
+        if (
+          node.id.type !== AST_NODE_TYPES.Identifier ||
+          !node.id.typeAnnotation
+        )
+          return;
         if (!isNullableUnion(node.id.typeAnnotation)) return;
 
         const baseType = getNonNullableType(node.id.typeAnnotation);
@@ -490,10 +518,10 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
       CallExpression(node: TSESTree.CallExpression) {
         // Skip if this is already an optional.from() or optional.from_async() call
         if (
-          node.callee.type === "MemberExpression" &&
-          node.callee.object.type === "Identifier" &&
+          node.callee.type === AST_NODE_TYPES.MemberExpression &&
+          node.callee.object.type === AST_NODE_TYPES.Identifier &&
           node.callee.object.name === "optional" &&
-          node.callee.property.type === "Identifier" &&
+          node.callee.property.type === AST_NODE_TYPES.Identifier &&
           (node.callee.property.name === "from" ||
             node.callee.property.name === "from_async")
         ) {
@@ -504,12 +532,12 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         let parent: TSESTree.Node = node.parent;
         while (parent) {
           if (
-            parent.type === "ArrowFunctionExpression" &&
-            parent.parent?.type === "CallExpression" &&
-            parent.parent.callee.type === "MemberExpression" &&
-            parent.parent.callee.object.type === "Identifier" &&
+            parent.type === AST_NODE_TYPES.ArrowFunctionExpression &&
+            parent.parent?.type === AST_NODE_TYPES.CallExpression &&
+            parent.parent.callee.type === AST_NODE_TYPES.MemberExpression &&
+            parent.parent.callee.object.type === AST_NODE_TYPES.Identifier &&
             parent.parent.callee.object.name === "optional" &&
-            parent.parent.callee.property.type === "Identifier" &&
+            parent.parent.callee.property.type === AST_NODE_TYPES.Identifier &&
             (parent.parent.callee.property.name === "from" ||
               parent.parent.callee.property.name === "from_async")
           ) {
@@ -521,11 +549,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
         // Check for common nullable-returning functions
         let functionName = "";
-        if (node.callee.type === "Identifier") {
+        if (node.callee.type === AST_NODE_TYPES.Identifier) {
           functionName = node.callee.name;
         } else if (
-          node.callee.type === "MemberExpression" &&
-          node.callee.property.type === "Identifier"
+          node.callee.type === AST_NODE_TYPES.MemberExpression &&
+          node.callee.property.type === AST_NODE_TYPES.Identifier
         ) {
           functionName = node.callee.property.name;
         }

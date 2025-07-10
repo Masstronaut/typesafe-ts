@@ -33,9 +33,32 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:file": "eslint",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix"
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:fix": "npm audit fix",
+    "docs:build": "typedoc src/index.ts",
+    "docs:serve": "typedoc src/index.ts --watch",
+    "release": "semantic-release",
+    "release:dry-run": "semantic-release --dry-run",
+    "prepare": "husky"
   },
-  "keywords": [],
+  "description": "TypeScript utilities for type-safe error handling and optional values",
+  "keywords": [
+    "typescript",
+    "monads",
+    "optional",
+    "result",
+    "error-handling",
+    "type-safe"
+  ],
+  "homepage": "https://github.com/masstronaut/typesafe-ts#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masstronaut/typesafe-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/masstronaut/typesafe-ts/issues"
+  },
   "files": [
     "dist/",
     "LICENSE.txt",
@@ -43,8 +66,13 @@
   ],
   "author": "Allan Deutsch",
   "license": "MIT",
-  "description": "",
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.3",
+    "@semantic-release/npm": "^12.0.2",
     "@tsconfig/strictest": "^2.0.5",
     "@types/node": "^22.15.29",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
@@ -52,7 +80,17 @@
     "@typescript-eslint/rule-tester": "^8.35.1",
     "@typescript-eslint/utils": "^8.35.1",
     "eslint": "^9.17.0",
+    "husky": "^9.1.7",
     "jiti": "^2.4.2",
+    "lint-staged": "^16.1.2",
+    "semantic-release": "^24.2.6",
+    "typedoc": "^0.28.7",
     "typescript": "^5.8.3"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint",
+      "npm run typecheck"
+    ]
   }
 }

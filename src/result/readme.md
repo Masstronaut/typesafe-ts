@@ -321,7 +321,7 @@ function parseNumber(str: string): Result<number, Error> {
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
 
 ### Try/Catch Blocks
 
@@ -353,7 +353,7 @@ function readConfig(): Result<ConfigData, Error> {
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
 
 ### Async Try/Catch Blocks
 
@@ -385,7 +385,7 @@ async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
 
 ### Function Calls That May Throw
 
@@ -405,7 +405,7 @@ function processData(jsonString: string): Result<ProcessedData, Error> {
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-result-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
 
 ### Async Function Calls
 

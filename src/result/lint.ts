@@ -26,7 +26,7 @@ type MessageIds =
 
 const createRule = ESLintUtils.RuleCreator(
   () =>
-    `https://github.com/masstronaut/ts-utils/blob/main/src/result/readme.md`,
+    `https://github.com/masstronaut/typesafe-ts/blob/main/src/result/readme.md`,
 );
 
 /**

@@ -15,7 +15,7 @@ import { enforceOptionalUsage } from './src/optional/lint.ts';
 import { enforceResultUsage } from './src/result/lint.ts';
 
 /**
- * ESLint 9 flat configuration for ts-utils with custom TypeScript monadic rules.
+ * ESLint 9 flat configuration for typesafe-ts with custom TypeScript monadic rules.
  * 
  * This configuration demonstrates how to use the custom ESLint rules that enforce
  * Optional and Result usage patterns for type-safe functional programming.
@@ -39,7 +39,7 @@ const config: TSESLint.FlatConfig.ConfigArray = [
       },
     },
     plugins: {
-      'ts-utils': tsUtilsPlugin,
+      'typesafe-ts': tsUtilsPlugin,
       '@typescript-eslint': typescriptEslint,
     },
     rules: {
@@ -47,13 +47,13 @@ const config: TSESLint.FlatConfig.ConfigArray = [
       '@typescript-eslint/no-explicit-any': 'error',
       
       // Enforce Optional usage instead of nullable unions
-      'ts-utils/enforce-optional-usage': ['error', {
+      'typesafe-ts/enforce-optional-usage': ['error', {
         allowExceptions: [], // Add function names to exclude
         autoFix: true,
       }],
       
       // Enforce Result usage instead of throw/try-catch
-      'ts-utils/enforce-result-usage': ['error', {
+      'typesafe-ts/enforce-result-usage': ['error', {
         allowExceptions: [], // Add function names to exclude
         allowTestFiles: true, // Allow throw/try-catch in test files
         autoFix: true,
@@ -66,8 +66,8 @@ const config: TSESLint.FlatConfig.ConfigArray = [
     files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts', '**/tests/**/*.ts'],
     rules: {
       // More lenient rules for test files
-      'ts-utils/enforce-optional-usage': 'warn',
-      'ts-utils/enforce-result-usage': ['warn', {
+      'typesafe-ts/enforce-optional-usage': 'warn',
+      'typesafe-ts/enforce-result-usage': ['warn', {
         allowTestFiles: true,
         autoFix: false, // Don't auto-fix in test files
       }],
