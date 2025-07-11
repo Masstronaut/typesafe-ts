@@ -807,7 +807,7 @@ const result = {
       errors: errors,
     } as RetryError<ErrorType>);
   },
-};
+} as const;
 
 Object.freeze(result);
 
