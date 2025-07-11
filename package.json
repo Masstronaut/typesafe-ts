@@ -51,13 +51,13 @@
     "error-handling",
     "type-safe"
   ],
-  "homepage": "https://github.com/masstronaut/typesafe-ts#readme",
+  "homepage": "https://github.com/Masstronaut/typesafe-ts#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/masstronaut/typesafe-ts.git"
+    "url": "https://github.com/Masstronaut/typesafe-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/masstronaut/typesafe-ts/issues"
+    "url": "https://github.com/Masstronaut/typesafe-ts/issues"
   },
   "files": [
     "dist/",
