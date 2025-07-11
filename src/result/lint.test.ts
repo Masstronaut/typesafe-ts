@@ -10,18 +10,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import { test } from "node:test";
 import { RuleTester } from "@typescript-eslint/rule-tester";
-import { enforceResultUsage } from "./eslint-rule.ts";
+import { enforceResultUsage } from "./lint.ts";
 
 // Configure RuleTester for Node.js test environment
-RuleTester.afterAll = () => {};
+RuleTester.afterAll = () => { };
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.it = test;
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.describe = (name: string, fn: () => void) => test(name, fn);
 
 const ruleTester = new RuleTester({
   languageOptions: {
     parserOptions: {
       ecmaVersion: 2020,
-      sourceType: 'module',
+      sourceType: "module",
     },
   },
 });
@@ -31,23 +33,23 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
     {
       name: "Functions returning Result are valid",
       code: `function parseJSON(text: string): Result<any, Error> {
-        return result.from(() => JSON.parse(text));
+        return result.try(() => JSON.parse(text));
       }`,
     },
     {
-      name: "Using result.from() for throwing calls is valid",
-      code: `const parsed = result.from(() => JSON.parse(jsonString));`,
+      name: "Using result.try() for throwing calls is valid",
+      code: `const parsed = result.try(() => JSON.parse(jsonString));`,
     },
     {
-      name: "Using result.from() with block statement is valid",
-      code: `const data = result.from(() => {
+      name: "Using result.try() with block statement is valid",
+      code: `const data = result.try(() => {
         const parsed = JSON.parse(input);
         return parsed.value;
       });`,
     },
     {
-      name: "Using result.from_async() for async operations is valid",
-      code: `const data = await result.from_async(() => fetch('/api/data'));`,
+      name: "Using result.try_async() for async operations is valid",
+      code: `const data = await result.try_async(() => fetch('/api/data'));`,
     },
     {
       name: "Using result.error() instead of throw is valid",
@@ -90,7 +92,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
     },
     {
       name: "Already wrapped calls are valid",
-      code: `const parsed = result.from(() => {
+      code: `const parsed = result.try(() => {
         return JSON.parse(data);
       });`,
     },
@@ -99,7 +101,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const result = obj[methodName]();`,
     },
     {
-      name: "Non-throwing member expressions are valid", 
+      name: "Non-throwing member expressions are valid",
       code: `const max = Math.max(1, 2, 3);`,
     },
     {
@@ -111,7 +113,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const trimmed = String.prototype.trim.call("  test  ");`,
     },
     {
-      name: "Call expression outside try block should exercise isInsideTryBlock false path", 
+      name: "Call expression outside try block should exercise isInsideTryBlock false path",
       code: `function test() { const data = Math.random(); }`,
     },
     {
@@ -128,6 +130,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
         throw new Error("Exact match exception");
       }`,
       options: [{ allowExceptions: ["exactName"] }],
+    },
+    {
+      name: "Arrow functions returning null can be used inside result.try()",
+      code: `const nullResult = result.try(() => null);`,
     },
   ],
 
@@ -202,7 +208,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
         },
       ],
       output: `function parseData(input: string) {
-        const result = result.from(() => {
+        const result = result.try(() => {
           const data = JSON.parse(input);
           return data.value;
         });
@@ -225,7 +231,7 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
         },
       ],
       output: `async function fetchData() {
-        const result = await result.from_async(async () => {
+        const result = await result.try_async(async () => {
           const response = await fetch('/api/data');
           return await response.json();
         });
@@ -237,10 +243,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const data = JSON.parse(jsonString);`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const data = result.from(() => JSON.parse(jsonString));`,
+      output: `const data = result.try(() => JSON.parse(jsonString));`,
     },
 
     {
@@ -248,10 +254,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const number = parseInt(userInput);`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const number = result.from(() => parseInt(userInput));`,
+      output: `const number = result.try(() => parseInt(userInput));`,
     },
 
     {
@@ -259,10 +265,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const decoded = atob(encodedString);`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const decoded = result.from(() => atob(encodedString));`,
+      output: `const decoded = result.try(() => atob(encodedString));`,
     },
 
     {
@@ -270,10 +276,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const response = fetch('/api/data');`,
       errors: [
         {
-          messageId: "useResultFromAsync",
+          messageId: "useResultTryAsync",
         },
       ],
-      output: `const response = result.from_async(() => fetch('/api/data'));`,
+      output: `const response = result.try_async(() => fetch('/api/data'));`,
     },
 
     {
@@ -281,10 +287,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const proxy = Proxy.revocable({}, {});`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const proxy = result.from(() => Proxy.revocable({}, {}));`,
+      output: `const proxy = result.try(() => Proxy.revocable({}, {}));`,
     },
 
     {
@@ -292,10 +298,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const arr = Array.from({ length: -1 });`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const arr = result.from(() => Array.from({ length: -1 }));`,
+      output: `const arr = result.try(() => Array.from({ length: -1 }));`,
     },
 
     {
@@ -303,10 +309,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `Object.defineProperty(obj, 'prop', { value: 42 });`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `result.from(() => Object.defineProperty(obj, 'prop', { value: 42 }));`,
+      output: `result.try(() => Object.defineProperty(obj, 'prop', { value: 42 }));`,
     },
 
     {
@@ -314,10 +320,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const char = String.fromCharCode(0x110000);`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const char = result.from(() => String.fromCharCode(0x110000));`,
+      output: `const char = result.try(() => String.fromCharCode(0x110000));`,
     },
 
     {
@@ -325,10 +331,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const key = Symbol.keyFor(notASymbol);`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const key = result.from(() => Symbol.keyFor(notASymbol));`,
+      output: `const key = result.try(() => Symbol.keyFor(notASymbol));`,
     },
 
     {
@@ -336,10 +342,10 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       code: `const value = Reflect.get(target, 'prop');`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
-      output: `const value = result.from(() => Reflect.get(target, 'prop'));`,
+      output: `const value = result.try(() => Reflect.get(target, 'prop'));`,
     },
 
     {
@@ -350,15 +356,15 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
       };`,
       errors: [
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
         {
-          messageId: "useResultFrom",
+          messageId: "useResultTry",
         },
       ],
       output: `const result = {
-        parsed: result.from(() => JSON.parse(input1)),
-        number: result.from(() => parseInt(input2))
+        parsed: result.try(() => JSON.parse(input1)),
+        number: result.try(() => parseInt(input2))
       };`,
     },
 

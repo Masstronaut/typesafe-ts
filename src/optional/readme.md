@@ -204,7 +204,7 @@ function findUser(id: string): Optional<User> {
 
 **Note:** Auto-fix is disabled for this violation because it would only change the return type without updating the return statements. You must manually change both the return type to `: Optional<User>` and update return statements to use `optional.some(value)` or `optional.none()`.
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-optional-usage`
 
 ### 2. Nullable Function Calls (`useOptionalFrom`)
 
@@ -222,7 +222,7 @@ const user = optional.from(() => users.find(u => u.active));
 
 **Auto-fix:** Function calls are automatically wrapped with `optional.from(() => originalCall)`.
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-optional-usage`
 
 The rule recognizes common nullable-returning APIs including:
 - DOM methods: `getElementById`, `querySelector`, `getElementsByClassName`, `getElementsByTagName`
@@ -245,7 +245,7 @@ const result: Optional<number> = optional.from(() => computeValue());
 
 **Note:** Auto-fix is disabled for this violation because it would only change the type annotation without updating the initialization value. You must manually change both the type to `: Optional<T>` and initialize with `optional.some(value)` or `optional.none()`.
 
-**Disable rule:** `// eslint-disable-next-line ts-utils/enforce-optional-usage`
+**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-optional-usage`
 
 ## Message Types
 

@@ -22,7 +22,17 @@ Utilities in this repository are expected to meet the following criteria:
 
 # Utilities
 
-- **[`Optional`](src/optional/optional.ts)**: A monadic alternative to `null`/`undefined` for expressing the result of operations that may not produce a value, and to work with those results.
+- **[`Optional`](src/optional/optional.ts)**: A type-safe and ergonomic alternative to `null`|`undefined` for values that might be empty.
+- **[`Result`](src/result/result.ts)**: A type-safe alternative to `throw`ing errors; `Result` treats errors as values with full type support.
+
+## ESLint Rules
+
+Both `Optional` and `Result` include ESLint rules to help assist with adoption and correct usage:
+
+- **`enforce-optional-usage`**: Detects functions that return nullable types and suggests using `Optional` instead
+- **`enforce-result-usage`**: Detects throw statements and try/catch blocks, suggesting a `Result`-based approach instead
+
+These rules help teams adopt typesafe patterns consistently across their codebase. See the individual utility documentation for setup instructions.
 
 # Contributing
 
@@ -33,7 +43,10 @@ To validate changes:
 ```sh
 npm run test
 npm run typecheck
+npm run lint
 ```
+
+For more guidance on contributing, see the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
 # License
 

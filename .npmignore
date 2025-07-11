@@ -1,0 +1,27 @@
+# Source files
+src/
+test-project/
+
+# Test files
+*.test.ts
+*.test.js
+
+# Configuration files
+tsconfig.json
+tsconfig.build.json
+eslint.config.ts
+
+# Documentation
+readme.md
+CLAUDE.md
+AGENTS.md
+
+# Development files
+test.ts
+coverage/
+.git/
+node_modules/
+
+# Package files
+*.tgz
+package-lock.json

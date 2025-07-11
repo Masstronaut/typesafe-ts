@@ -3,14 +3,14 @@ import assert from "node:assert";
 
 import { optional, type Optional } from "./optional.ts";
 
-test("Optional", async (t) => {
-  t.test("can be narrowed using .is_some()", () => {
+await test("Optional", async (t) => {
+  await t.test("can be narrowed using .is_some()", () => {
     const value = "Hello";
     const maybeValue = optional.some(value);
     assert.ok(maybeValue.is_some());
     assert.strictEqual(maybeValue.value, value);
   });
-  t.test("will provide its value if is_some() via .value_or()", () => {
+  await t.test("will provide its value if is_some() via .value_or()", () => {
     const value = "Hello";
     const maybeValue: Optional<string> = optional.some(value);
     assert.strictEqual(maybeValue.value_or("Default"), value);
@@ -26,22 +26,25 @@ test("Optional", async (t) => {
       objectValue,
     );
   });
-  t.test("without a value can provide a default using .value_or()", () => {
-    const value = "Hello";
-    const maybeValue = optional.some(value);
-    assert.strictEqual(maybeValue.value_or("Default"), value);
-    const emptyMaybeValue = optional.none<string>();
-    assert.strictEqual(emptyMaybeValue.value_or("Default"), "Default");
+  await t.test(
+    "without a value can provide a default using .value_or()",
+    () => {
+      const value = "Hello";
+      const maybeValue = optional.some(value);
+      assert.strictEqual(maybeValue.value_or("Default"), value);
+      const emptyMaybeValue = optional.none<string>();
+      assert.strictEqual(emptyMaybeValue.value_or("Default"), "Default");
 
-    const numericMaybeValue = optional.none<number>();
-    assert.strictEqual(numericMaybeValue.value_or(123), 123);
+      const numericMaybeValue = optional.none<number>();
+      assert.strictEqual(numericMaybeValue.value_or(123), 123);
 
-    const objectMaybeValue = optional.none<object>();
-    assert.deepStrictEqual(objectMaybeValue.value_or({ key: "default" }), {
-      key: "default",
-    });
-  });
-  t.test("can transform its value using .map()", () => {
+      const objectMaybeValue = optional.none<object>();
+      assert.deepStrictEqual(objectMaybeValue.value_or({ key: "default" }), {
+        key: "default",
+      });
+    },
+  );
+  await t.test("can transform its value using .map()", () => {
     const value = "Hello";
     const maybeValue = optional.some(value);
     const transformed = maybeValue.map((v) => v.toUpperCase());
@@ -53,16 +56,14 @@ test("Optional", async (t) => {
     assert.ok(numericTransformed.is_some());
     assert.strictEqual(numericTransformed.value, 84);
   });
-  t.test("Won't run the mapper function if the Optional is empty", () => {
+  await t.test("Won't run the mapper function if the Optional is empty", () => {
     const emptyMaybeValue = optional.none<string>();
     const transformed = emptyMaybeValue.map(() =>
       assert.fail("Mapping function was run on an empty Optional value."),
     );
     assert.ok(!transformed.is_some());
   });
-  const optionalName = optional.some("name");
-  t.test(`Optionals are named ${optionalName}`);
-  t.test("can chain operations using .and_then()", () => {
+  await t.test("can chain operations using .and_then()", () => {
     const value = "Hello";
     const maybeValue = optional.some(value);
     const result = maybeValue.and_then((v) => optional.some(v.length));
@@ -75,7 +76,7 @@ test("Optional", async (t) => {
     );
     assert.ok(!emptyResult.is_some());
   });
-  t.test("can chain operations using .or_else()", () => {
+  await t.test("can chain operations using .or_else()", () => {
     const value = "Hello";
     const maybeValue = optional.some(value);
     const result = maybeValue.or_else(() => optional.some("Default"));
@@ -87,7 +88,7 @@ test("Optional", async (t) => {
     assert.ok(emptyResult.is_some());
     assert.strictEqual(emptyResult.value, "Default");
   });
-  t.test("Can chain operations using a combination of monadic methods", () => {
+  await t.test("Can chain operations using a combination of monadic methods", () => {
     const maybeValue = optional.some("Hello");
     const transformedResult = maybeValue
       .map((v) => v + " World")
@@ -96,7 +97,7 @@ test("Optional", async (t) => {
     assert.strictEqual(transformedResult, 11);
   });
 
-  t.test("has correct Symbol.toStringTag", () => {
+  await t.test("has correct Symbol.toStringTag", () => {
     const someValue = optional.some("test");
     const noneValue = optional.none<string>();
 
@@ -104,7 +105,7 @@ test("Optional", async (t) => {
     assert.strictEqual(noneValue[Symbol.toStringTag], "Optional");
   });
 
-  t.test("accepts null and undefined as valid values", () => {
+  await t.test("accepts null and undefined as valid values", () => {
     const nullOptional = optional.some(null);
     assert.ok(nullOptional.is_some());
     assert.strictEqual(nullOptional.value, null);
@@ -114,7 +115,7 @@ test("Optional", async (t) => {
     assert.strictEqual(undefinedOptional.value, undefined);
   });
 
-  t.test("complex chaining with early termination", () => {
+  await t.test("complex chaining with early termination", () => {
     const result = optional
       .some("start")
       .map((v) => v + "-step1")
@@ -139,7 +140,7 @@ test("Optional", async (t) => {
     assert.ok(!terminatedResult.is_some());
   });
 
-  t.test("or_else chains with multiple fallbacks", () => {
+  await t.test("or_else chains with multiple fallbacks", () => {
     const result = optional
       .none<string>()
       .or_else(() => optional.none<string>())
@@ -149,8 +150,8 @@ test("Optional", async (t) => {
     assert.strictEqual(result.value, "fallback");
   });
 
-  t.test("Generator/Iterator Interface", async (t) => {
-    t.test("Optional with value yields its value in for-of loop", () => {
+  await t.test("Generator/Iterator Interface", async (t) => {
+  await t.test("Optional with value yields its value in for-of loop", () => {
       const someOptional = optional.some(42);
       const values: number[] = [];
 
@@ -162,7 +163,7 @@ test("Optional", async (t) => {
       assert.strictEqual(values[0], 42);
     });
 
-    t.test("Empty Optional yields nothing in for-of loop", () => {
+  await t.test("Empty Optional yields nothing in for-of loop", () => {
       const emptyOptional = optional.none<number>();
       const values: number[] = [];
 
@@ -173,7 +174,7 @@ test("Optional", async (t) => {
       assert.strictEqual(values.length, 0);
     });
 
-    t.test("can collect present values from array of optionals", () => {
+  await t.test("can collect present values from array of optionals", () => {
       const optionals = [
         optional.some(1),
         optional.none<number>(),
@@ -192,7 +193,7 @@ test("Optional", async (t) => {
       assert.deepStrictEqual(presentValues, [1, 3, 5]);
     });
 
-    t.test("generator works with Array.from", () => {
+  await t.test("generator works with Array.from", () => {
       const someOptional = optional.some("hello");
       const values = Array.from(someOptional);
 
@@ -205,7 +206,7 @@ test("Optional", async (t) => {
       assert.strictEqual(emptyValues.length, 0);
     });
 
-    t.test("generator works with spread operator", () => {
+  await t.test("generator works with spread operator", () => {
       const someOptional = optional.some(100);
       const values = [...someOptional];
 
@@ -218,7 +219,7 @@ test("Optional", async (t) => {
       assert.strictEqual(emptyValues.length, 0);
     });
 
-    t.test("can be used with destructuring", () => {
+  await t.test("can be used with destructuring", () => {
       const someOptional = optional.some("test");
       const [first, second] = someOptional;
 
@@ -232,7 +233,7 @@ test("Optional", async (t) => {
       assert.strictEqual(emptySecond, undefined);
     });
 
-    t.test("generator works with different value types", () => {
+  await t.test("generator works with different value types", () => {
       const stringOptional = optional.some("hello");
       assert.deepStrictEqual([...stringOptional], ["hello"]);
 
@@ -250,8 +251,8 @@ test("Optional", async (t) => {
     });
   });
 
-  t.test("from() method", async (t) => {
-    t.test("wraps non-null/undefined values in some", () => {
+  await t.test("from() method", async (t) => {
+  await t.test("wraps non-null/undefined values in some", () => {
       const result = optional.from(() => "hello");
       assert.ok(result.is_some());
       assert.strictEqual(result.value, "hello");
@@ -265,19 +266,19 @@ test("Optional", async (t) => {
       assert.deepStrictEqual(objectResult.value, { key: "value" });
     });
 
-    t.test("wraps null values in none", () => {
+  await t.test("wraps null values in none", () => {
       const result = optional.from(() => null);
       assert.ok(!result.is_some());
     });
 
-    t.test("wraps undefined values in none", () => {
+  await t.test("wraps undefined values in none", () => {
       const result = optional.from(() => undefined);
       assert.ok(!result.is_some());
     });
 
-    t.test("works with functions that conditionally return null", () => {
+  await t.test("works with functions that conditionally return null", () => {
       // Need this fn to return null to test that optional.from() works correctly
-      // eslint-disable-next-line ts-utils/enforce-optional-usage
+      // eslint-disable-next-line typesafe-ts/enforce-optional-usage
       function findItem(id: number): string | null {
         return id === 1 ? "found" : null;
       }
@@ -290,9 +291,9 @@ test("Optional", async (t) => {
       assert.ok(!notFoundResult.is_some());
     });
 
-    t.test("works with DOM-like APIs", () => {
+  await t.test("works with DOM-like APIs", () => {
       const mockDocument = {
-        // eslint-disable-next-line ts-utils/enforce-optional-usage
+        // eslint-disable-next-line typesafe-ts/enforce-optional-usage
         getElementById: (id: string) => (id === "exists" ? { id } : null),
       };
 
@@ -308,7 +309,7 @@ test("Optional", async (t) => {
       assert.ok(!notFoundElement.is_some());
     });
 
-    t.test("can be chained with other Optional methods", () => {
+  await t.test("can be chained with other Optional methods", () => {
       const result = optional
         .from(() => "hello")
         .map((v) => v.toUpperCase())
@@ -326,34 +327,34 @@ test("Optional", async (t) => {
     });
   });
 
-  t.test("from_async() method", async (t) => {
-    t.test("wraps non-null/undefined resolved values in some", async () => {
-      const result = await optional.from_async(async () => "hello");
+  await t.test("from_async() method", async (t) => {
+  await t.test("wraps non-null/undefined resolved values in some", async () => {
+      const result = await optional.from_async(() => Promise.resolve("hello"));
       assert.ok(result.is_some());
       assert.strictEqual(result.value, "hello");
 
-      const numberResult = await optional.from_async(async () => 42);
+      const numberResult = await optional.from_async(() => Promise.resolve(42));
       assert.ok(numberResult.is_some());
       assert.strictEqual(numberResult.value, 42);
 
-      const objectResult = await optional.from_async(async () => ({
+      const objectResult = await optional.from_async(() => Promise.resolve({
         key: "value",
       }));
       assert.ok(objectResult.is_some());
       assert.deepStrictEqual(objectResult.value, { key: "value" });
     });
 
-    t.test("wraps null resolved values in none", async () => {
-      const result = await optional.from_async(async () => null);
+  await t.test("wraps null resolved values in none", async () => {
+      const result = await optional.from_async(() => Promise.resolve(null));
       assert.ok(!result.is_some());
     });
 
-    t.test("wraps undefined resolved values in none", async () => {
-      const result = await optional.from_async(async () => undefined);
+  await t.test("wraps undefined resolved values in none", async () => {
+      const result = await optional.from_async(() => Promise.resolve(undefined));
       assert.ok(!result.is_some());
     });
 
-    t.test(
+  await t.test(
       "works with async functions that conditionally return null",
       async () => {
         async function fetchUser(id: number): Promise<{ name: string } | null> {
@@ -370,13 +371,12 @@ test("Optional", async (t) => {
       },
     );
 
-    t.test("works with fetch-like APIs", async () => {
-      const mockFetch = async (url: string) => {
+  await t.test("works with fetch-like APIs", async () => {
+      const mockFetch = (url: string) => {
         if (url === "/api/success") {
-          return { ok: true, json: async () => ({ data: "success" }) };
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: "success" }) });
         }
-        // eslint-disable-next-line ts-utils/enforce-optional-usage
-        return { ok: false, json: async () => null };
+        return Promise.resolve({ ok: false, json: () => Promise.resolve(null) });
       };
 
       const successResult = await optional.from_async(async () => {
@@ -395,8 +395,8 @@ test("Optional", async (t) => {
       assert.ok(!failureResult.is_some());
     });
 
-    t.test("can be chained with other Optional methods", async () => {
-      const result = (await optional.from_async(async () => "hello"))
+  await t.test("can be chained with other Optional methods", async () => {
+      const result = (await optional.from_async(() => Promise.resolve("hello")))
         .map((v) => v.toUpperCase())
         .and_then((v) => optional.some(v.length))
         .value_or(0);
@@ -404,7 +404,7 @@ test("Optional", async (t) => {
       assert.strictEqual(result, 5);
 
       const nullResult = (
-        await optional.from_async(async () => null as string | null)
+        await optional.from_async(() => Promise.resolve(null as string | null))
       )
         .map((v) => v.toUpperCase())
         .value_or("default");
@@ -412,18 +412,18 @@ test("Optional", async (t) => {
       assert.strictEqual(nullResult, "default");
     });
 
-    t.test(
+  await t.test(
       "handles promises that resolve to falsy but non-null values",
       async () => {
-        const falseResult = await optional.from_async(async () => false);
+        const falseResult = await optional.from_async(() => Promise.resolve(false));
         assert.ok(falseResult.is_some());
         assert.strictEqual(falseResult.value, false);
 
-        const zeroResult = await optional.from_async(async () => 0);
+        const zeroResult = await optional.from_async(() => Promise.resolve(0));
         assert.ok(zeroResult.is_some());
         assert.strictEqual(zeroResult.value, 0);
 
-        const emptyStringResult = await optional.from_async(async () => "");
+        const emptyStringResult = await optional.from_async(() => Promise.resolve(""));
         assert.ok(emptyStringResult.is_some());
         assert.strictEqual(emptyStringResult.value, "");
       },

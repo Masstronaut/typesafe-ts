@@ -17,21 +17,28 @@
     "noImplicitOverride": true,
     "allowUnreachableCode": false,
     "noImplicitAny": true,
-    /* Flexible for dev and build */
+    /* Build Options */
     "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "module": "NodeNext",
-    "moduleResolution": "nodenext",
-    "noEmit": true,
-    /* Build options (overridden by CLI) */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "removeComments": false
+    "removeComments": false,
+    "noEmit": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "src/index.ts",
+    "src/optional/index.ts",
+    "src/result/index.ts",
+    "src/optional/lint.ts",
+    "src/result/lint.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "dist",
+    "node_modules"
+  ]
 }

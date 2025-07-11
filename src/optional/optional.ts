@@ -241,7 +241,7 @@ class OptionalImpl<ValueType> implements Optional<ValueType> {
    *                           .value_or(0);
    * console.log(transformedResult); // prints 11
    */
-  static some<ValueType>(value: ValueType): Optional<ValueType> {
+  static some<ValueType>(this: void, value: ValueType): Optional<ValueType> {
     return new OptionalImpl(value);
   }
   /**
@@ -255,7 +255,7 @@ class OptionalImpl<ValueType> implements Optional<ValueType> {
    * const maybeValue = optional.none<string>();
    * ```
    */
-  static none<ValueType>(): Optional<ValueType> {
+  static none<ValueType>(this: void): Optional<ValueType> {
     return new OptionalImpl<ValueType>(none_value);
   }
 }
