@@ -2,6 +2,10 @@ import type { UserConfig } from "@commitlint/types";
 
 const Configuration: UserConfig = {
   extends: ["@commitlint/config-conventional"],
+  ignores: [
+    // Skip commitlint for semantic-release commits
+    (message) => message.includes("chore(release):") && message.includes("[skip ci]"),
+  ],
   rules: {
     "type-enum": [
       2,
