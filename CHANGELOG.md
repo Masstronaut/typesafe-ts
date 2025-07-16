@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.0.0...v1.1.0) (2025-07-16)
+
+
+### Features
+
+* add AsyncResult for immediate chaining on async operations ([#15](https://github.com/Masstronaut/typesafe-ts/issues/15)) ([dd3a01d](https://github.com/Masstronaut/typesafe-ts/commit/dd3a01d8aa7ed8f955f5e200d18bb92bb1fb8e2c))
+
 # 1.0.0 (2025-07-11)
 
 
