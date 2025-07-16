@@ -338,7 +338,8 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
 }
 
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements IResult<ResultType, ErrorType> {
+  implements IResult<ResultType, ErrorType>
+{
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -453,22 +454,82 @@ class ResultImpl<ResultType, ErrorType extends Error>
 }
 
 /**
- * @inlineType
- * @interface
+ * An awaitable wrapper for Result that enables immediate method chaining on async operations.
+ * AsyncResult implements PromiseLike and provides Result transformation methods like map, and_then, and or_else.
+ * The AsyncResult must be awaited to inspect the final result with `is_ok()` or `is_error()`.
+ *
+ * @template ResultType - The type of the ok value
+ * @template ErrorType - The type of the error (must extend Error)
+ *
+ * @example
+ * ```typescript
+ * // Chain operations and await the final result in one expression
+ * const finalResult = await result.try_async(() => fetchUser("123"))
+ *   .map(user => user.name.toUpperCase())
+ *   .and_then(name => name ? result.ok(name) : result.error(new Error("Empty name")))
+ *   .or_else(() => result.ok("Unknown"));
+ * ```
  */
 class AsyncResult<ResultType, ErrorType extends Error>
-  implements PromiseLike<Result<ResultType, ErrorType>> {
+  implements PromiseLike<Result<ResultType, ErrorType>>
+{
   private promise: Promise<Result<ResultType, ErrorType>>;
 
+  /**
+   * Creates a new AsyncResult from a Promise that resolves to a Result.
+   *
+   * While `result.try_async()` is the preferred way to create AsyncResult instances,
+   * the constructor is useful when you have an async function that already returns
+   * a `Promise<Result>`. Wrapping it with `new AsyncResult()` provides access to
+   * the chaining API without requiring `await` and without "coloring" your function
+   * as async. This is particularly beneficial in contexts where `await` isn't allowed,
+   * such as top-level code or in component logic of some frontend frameworks.
+   *
+   * @param promise - A Promise that resolves to a Result
+   *
+   * @example
+   * ```typescript
+   * // Async function that returns Promise<Result>
+   * async function fetchUserData(id: string): Promise<Result<User, Error>> {
+   *   return result.try_async(() => fetch(`/api/users/${id}`))
+   *     .then(response => response.json());
+   * }
+   *
+   * // Without AsyncResult constructor: requires await, makes function async
+   * async function processUserAsync(id: string): Promise<Result<string, Error>> {
+   *   const userData = await fetchUserData(id);
+   *   return userData.map(user => user.name.toUpperCase());
+   * }
+   *
+   * // With AsyncResult constructor: no await needed, function stays sync
+   * function processUserSync(id: string): AsyncResult<string, Error> {
+   *   return new AsyncResult(fetchUserData(id))
+   *     .map(user => user.name.toUpperCase());
+   * }
+   *
+   * // Both usage patterns work the same way:
+   * const result1 = await processUserAsync("123");
+   * const result2 = await processUserSync("123");
+   * ```
+   */
   constructor(promise: Promise<Result<ResultType, ErrorType>>) {
     this.promise = promise;
   }
 
+  /**
+   * PromiseLike implementation equivalent to Promise.then. Allows AsyncResult to be awaited.
+   *
+   * @template TResult1 - The type returned when the promise resolves
+   * @template TResult2 - The type returned when the promise rejects
+   * @param onfulfilled - Callback executed when the AsyncResult resolves to a Result
+   * @param onrejected - Callback executed when the AsyncResult rejects
+   * @returns A PromiseLike that resolves to the result of the executed callback
+   */
   then<TResult1 = Result<ResultType, ErrorType>, TResult2 = never>(
     onfulfilled?:
       | ((
-        value: Result<ResultType, ErrorType>,
-      ) => TResult1 | PromiseLike<TResult1>)
+          value: Result<ResultType, ErrorType>,
+        ) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
@@ -479,14 +540,33 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return "Result" as const;
   }
 
+  /**
+   * Returns the contained value if Ok, otherwise returns the provided default value.
+   *
+   * @param value_if_error - The value to return if the Result contains an error
+   * @returns A Promise resolving to the contained value or the default value
+   */
   value_or(value_if_error: ResultType): Promise<ResultType> {
     return this.promise.then((result) => result.value_or(value_if_error));
   }
 
+  /**
+   * Access the contained error if this result is an error. Otherwise returns the provided default error.
+   *
+   * @param error_if_ok - The error to return if the Result contains a value
+   * @returns A Promise resolving to the contained error or the default error
+   */
   error_or(error_if_ok: ErrorType): Promise<ErrorType> {
     return this.promise.then((result) => result.error_or(error_if_ok));
   }
 
+  /**
+   * Transform the contained value if Ok, otherwise return the error unchanged.
+   *
+   * @template NewResultType - The type of the transformed value
+   * @param fn - Function to transform the value if Ok
+   * @returns A new AsyncResult with the transformed value if Ok, otherwise the original error
+   */
   map<NewResultType>(
     fn: (value: ResultType) => NewResultType,
   ): AsyncResult<NewResultType, ErrorType> {
@@ -494,6 +574,13 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return new AsyncResult(newPromise);
   }
 
+  /**
+   * Transform the contained error if Error, otherwise return the value unchanged.
+   *
+   * @template NewErrorType - The type of the transformed error
+   * @param fn - Function to transform the error if Error
+   * @returns A new AsyncResult with the transformed error if Error, otherwise the original value
+   */
   map_err<NewErrorType extends Error>(
     fn: (error: ErrorType) => NewErrorType,
   ): AsyncResult<ResultType, NewErrorType> {
@@ -501,6 +588,16 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return new AsyncResult(newPromise);
   }
 
+  /**
+   * Pattern match against the Result, executing the appropriate callback and returning its result.
+   *
+   * @template OKMatchResultType - The return type of the on_ok callback
+   * @template ErrorMatchResultType - The return type of the on_error callback
+   * @param handlers - Object containing callback functions for Ok and Error cases
+   * @param handlers.on_ok - Function to execute if Result is Ok, receiving the value
+   * @param handlers.on_error - Function to execute if Result is Error, receiving the error
+   * @returns A Promise resolving to the result of the executed callback
+   */
   match<OKMatchResultType, ErrorMatchResultType>({
     on_ok,
     on_error,
@@ -511,6 +608,14 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return this.promise.then((result) => result.match({ on_ok, on_error }));
   }
 
+  /**
+   * Chain another Result-returning operation if this Result is Ok.
+   * If this Result is Error, the function is not called and the error is propagated.
+   *
+   * @template NewResultType - The type of the value in the returned Result
+   * @param fn - Function that takes the Ok value and returns a new Result
+   * @returns A new AsyncResult with the result returned by fn if Ok, otherwise the original error
+   */
   and_then<NewResultType>(
     fn: (value: ResultType) => Result<NewResultType, ErrorType>,
   ): AsyncResult<NewResultType, ErrorType> {
@@ -518,6 +623,14 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return new AsyncResult(newPromise);
   }
 
+  /**
+   * Provide a fallback Result if this Result is Error.
+   * If this Result is Ok, the function is not called and the value is preserved.
+   *
+   * @template NewErrorType - The type of error in the fallback Result
+   * @param fn - Function that takes the Error and returns a fallback Result
+   * @returns A new AsyncResult with the fallback Result returned by fn if Error, otherwise the original Ok value
+   */
   or_else<NewErrorType extends Error>(
     fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
   ): AsyncResult<ResultType, NewErrorType> {
@@ -525,6 +638,25 @@ class AsyncResult<ResultType, ErrorType extends Error>
     return new AsyncResult(newPromise);
   }
 
+  /**
+   * Async iterator support. Yields the contained value if Ok, nothing if Error.
+   *
+   * @returns An async generator that yields the value if Ok, otherwise yields nothing
+   *
+   * @example
+   * ```typescript
+   * // Iterate over successful values
+   * for await (const value of result.try_async(() => fetchUser("123"))) {
+   *   console.log(value.name); // Only executes if fetch succeeds
+   * }
+   *
+   * // Collect successful values from multiple async operations
+   * const users = [];
+   * for await (const user of result.try_async(() => fetchUser("456"))) {
+   *   users.push(user);
+   * }
+   * ```
+   */
   async *[Symbol.asyncIterator](): AsyncGenerator<ResultType, void, unknown> {
     const result = await this.promise;
     for (const value of result) {
@@ -893,4 +1025,4 @@ const result = {
 
 Object.freeze(result);
 
-export { result, type Result, type AsyncResult, type RetryError };
+export { result, type Result, AsyncResult, type RetryError };
