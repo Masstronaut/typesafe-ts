@@ -47,4 +47,33 @@ runs:
           exit 1
         fi
         echo "✓ 100% test coverage achieved"
+        
+        # Generate coverage badge JSON
+        COLOR="brightgreen"
+        if [ $(echo "$COVERAGE < 80" | awk '{print ($1 < $3)}') -eq 1 ]; then
+          COLOR="red"
+        elif [ $(echo "$COVERAGE < 90" | awk '{print ($1 < $3)}') -eq 1 ]; then
+          COLOR="yellow"
+        elif [ $(echo "$COVERAGE < 100" | awk '{print ($1 < $3)}') -eq 1 ]; then
+          COLOR="green"
+        fi
+        
+        # Create coverage badge JSON
+        cat > coverage-badge.json << EOF
+        {
+          "schemaVersion": 1,
+          "label": "coverage",
+          "message": "${COVERAGE}%",
+          "color": "$COLOR"
+        }
+        EOF
+        
+        echo "Generated coverage badge JSON:"
+        cat coverage-badge.json
       shell: bash
+      
+    - name: Upload coverage badge
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-badge
+        path: coverage-badge.json

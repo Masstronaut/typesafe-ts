@@ -20,3 +20,26 @@ jobs:
         
       - name: Build
         uses: ./.github/actions/build
+        
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Download the coverage badge artifact
+          cp coverage-badge.json /tmp/coverage-badge.json
+          
+          # Configure git
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Create or switch to coverage branch
+          git fetch origin coverage || git checkout --orphan coverage
+          git checkout coverage || git checkout --orphan coverage
+          
+          # Clear everything except the coverage file
+          git rm -rf . || true
+          cp /tmp/coverage-badge.json coverage-badge.json
+          
+          # Commit and push
+          git add coverage-badge.json
+          git commit -m "Update coverage badge [skip ci]" || exit 0
+          git push origin coverage

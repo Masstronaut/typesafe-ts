@@ -22,6 +22,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
           
       - name: Test and validate
         uses: ./.github/actions/test-and-validate
