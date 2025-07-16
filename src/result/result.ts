@@ -453,13 +453,94 @@ class ResultImpl<ResultType, ErrorType extends Error>
 }
 
 /**
+ * @inlineType
+ * @interface
+ */
+class AsyncResult<ResultType, ErrorType extends Error>
+  implements PromiseLike<Result<ResultType, ErrorType>> {
+  private promise: Promise<Result<ResultType, ErrorType>>;
+
+  constructor(promise: Promise<Result<ResultType, ErrorType>>) {
+    this.promise = promise;
+  }
+
+  then<TResult1 = Result<ResultType, ErrorType>, TResult2 = never>(
+    onfulfilled?:
+      | ((
+        value: Result<ResultType, ErrorType>,
+      ) => TResult1 | PromiseLike<TResult1>)
+      | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return this.promise.then(onfulfilled, onrejected);
+  }
+
+  get [Symbol.toStringTag]() {
+    return "Result" as const;
+  }
+
+  value_or(value_if_error: ResultType): Promise<ResultType> {
+    return this.promise.then((result) => result.value_or(value_if_error));
+  }
+
+  error_or(error_if_ok: ErrorType): Promise<ErrorType> {
+    return this.promise.then((result) => result.error_or(error_if_ok));
+  }
+
+  map<NewResultType>(
+    fn: (value: ResultType) => NewResultType,
+  ): AsyncResult<NewResultType, ErrorType> {
+    const newPromise = this.promise.then((result) => result.map(fn));
+    return new AsyncResult(newPromise);
+  }
+
+  map_err<NewErrorType extends Error>(
+    fn: (error: ErrorType) => NewErrorType,
+  ): AsyncResult<ResultType, NewErrorType> {
+    const newPromise = this.promise.then((result) => result.map_err(fn));
+    return new AsyncResult(newPromise);
+  }
+
+  match<OKMatchResultType, ErrorMatchResultType>({
+    on_ok,
+    on_error,
+  }: {
+    on_ok: (value: ResultType) => OKMatchResultType;
+    on_error: (error: ErrorType) => ErrorMatchResultType;
+  }): Promise<OKMatchResultType | ErrorMatchResultType> {
+    return this.promise.then((result) => result.match({ on_ok, on_error }));
+  }
+
+  and_then<NewResultType>(
+    fn: (value: ResultType) => Result<NewResultType, ErrorType>,
+  ): AsyncResult<NewResultType, ErrorType> {
+    const newPromise = this.promise.then((result) => result.and_then(fn));
+    return new AsyncResult(newPromise);
+  }
+
+  or_else<NewErrorType extends Error>(
+    fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
+  ): AsyncResult<ResultType, NewErrorType> {
+    const newPromise = this.promise.then((result) => result.or_else(fn));
+    return new AsyncResult(newPromise);
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<ResultType, void, unknown> {
+    const result = await this.promise;
+    for (const value of result) {
+      yield value;
+    }
+  }
+}
+
+/**
  * Factory functions for creating Result instances.
  * This module provides the primary API for constructing Result values.
  *
  * @property {function} ok - Creates a successful Result containing the provided value
  * @property {function} error - Creates a failed Result containing the provided error
  * @property {function} try - Executes a function and wraps the result in a Result type
- * @property {function} try_async - Executes an async function and wraps the result in a Result type
+ * @property {function} try_async - Executes an async function and returns an awaitable AsyncResult that supports immediate chaining
  * @property {function} retry - Retries a Result-returning function multiple times until success
  * @property {function} retry_async - Retries an async Result-returning function multiple times until success
  *
@@ -598,50 +679,51 @@ const result = {
   },
 
   /**
-   * Executes an async function and wraps the result in a Promise<Result>.
-   * If the function resolves successfully, returns an Ok Result with the resolved value.
-   * If the function rejects or throws, returns an Error Result with the caught error.
+   * Executes an async function and wraps the result in an `AsyncResult`.
+   * The `AsyncResult` is a `PromiseLike` that supports the Result method chaining interfaces,
+   * and it can be `await`ed to access the `Result` and its contained value or error.
+   * If the function resolves successfully, the AsyncResult will contain an Ok Result with the resolved value.
+   * If the function rejects or throws, the AsyncResult will contain an Error Result with the caught error.
+   * To access the final `Result`, you will need to first `await` the `AsyncResult`.
    *
    * @template T - The resolved type of the async function
    * @param fn - An async function that may reject or throw
-   * @returns A Promise resolving to a Result containing either the resolved value or the caught error
+   * @returns An AsyncResult that can be chained immediately or awaited to get the final Result
    *
    * @example
    * ```typescript
-   * // Working with async functions that might reject
-   * async function fetchUserData(id: string): Promise<User> {
-   *   const response = await fetch(`/api/users/${id}`);
-   *   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-   *   return response.json();
+   * // Immediate chaining without intermediate awaits
+   * const processedUser = result.try_async(() => fetchUserData("123"))
+   *   .map(user => ({ ...user, name: user.name.toUpperCase() }))
+   *   .and_then(user => user.name ? result.ok(user) : result.error(new Error("Invalid name")))
+   *   .or_else(() => result.ok(createDefaultUser()));
+   *
+   * // Only await when you need the final result
+   * const finalUser = await processedUser;
+   * if (finalUser.is_ok()) {
+   *   console.log("Processed user:", finalUser.value.name);
    * }
    *
-   * const userResult = await result.try_async(() => fetchUserData("123"));
-   * if (userResult.is_ok()) {
-   *   console.log(userResult.value.name);
-   * } else {
-   *   console.log("Failed to fetch user:", userResult.error.message);
-   * }
-   *
-   * // Converting Promise-based APIs
-   * const fileContent = await result.try_async(() => fs.promises.readFile('file.txt', 'utf8'));
-   * const apiData = await result.try_async(async () => {
-   *   const response = await fetch('/api/data');
-   *   if (!response.ok) throw new Error('API request failed');
-   *   return response.json();
-   * });
+   * // Converting Promise-based APIs with chaining
+   * const fileData = await result.try_async(() => fs.promises.readFile('file.txt', 'utf8'))
+   *   .map(content => content.trim())
+   *   .and_then(content => content.length > 0 ? result.ok(content) : result.error(new Error("Empty file")));
    * ```
    */
-  try_async: async <T>(fn: () => Promise<T>): Promise<Result<T, Error>> => {
-    // need to use try/catch to wrap throwing functions in results.
-    // eslint-disable-next-line typesafe-ts/enforce-result-usage
-    try {
-      const value = await fn();
-      return ResultImpl.ok(value);
-    } catch (error) {
-      return ResultImpl.error(
-        error instanceof Error ? error : new Error(String(error)),
-      );
-    }
+  try_async: <T>(fn: () => Promise<T>): AsyncResult<T, Error> => {
+    const promise = (async (): Promise<Result<T, Error>> => {
+      // need to use try/catch to wrap throwing functions in a `Result`.
+      // eslint-disable-next-line typesafe-ts/enforce-result-usage
+      try {
+        const value = await fn();
+        return ResultImpl.ok(value);
+      } catch (error) {
+        return ResultImpl.error(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    })();
+    return new AsyncResult(promise);
   },
 
   /**
@@ -811,4 +893,4 @@ const result = {
 
 Object.freeze(result);
 
-export { result, type Result, type RetryError };
+export { result, type Result, type AsyncResult, type RetryError };

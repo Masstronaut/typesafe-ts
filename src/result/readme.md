@@ -71,11 +71,49 @@ export const result = {
   ok, // constructs a `Result` with a success value
   error, // constructs a `Result` with an error
   try, // constructs a `Result` from a provided function. Ok if it returns, Error if it throws.
-  try_async, // constructs a `Result` from an async function. Ok if it resolves, Error if it rejects or throws
+  try_async, // constructs an `AsyncResult` from an async function that supports immediate chaining
   retry, // executes a Result-returning function multiple times until success or retry limit is reached
   retry_async, // executes an async Result-returning function multiple times until success or retry limit is reached
 };
 ```
+
+# Async Result Chaining
+
+The `result.try_async()` method returns an `AsyncResult` type that supports immediate method chaining without requiring `await` first. `AsyncResult` is an awaitable `PromiseLike` that provides the same chaining methods as `Result` for ergonomic async operation handling.
+
+## Immediate Chaining
+
+You can chain operations directly on async results:
+
+```typescript
+const processed = result.try_async(() => fetchUserData(userId))
+  .map(user => user.name.toUpperCase())
+  .and_then(name => name.length > 0 ? result.ok(name) : result.error(new Error("Empty name")))
+  .or_else(() => result.ok("Unknown User"));
+
+// Only await when you need the final result
+const finalResult = await processed;
+```
+
+## Practical Example
+
+```typescript
+async function processUserProfile(userId: string): Promise<Result<UserProfile, Error>> {
+  return result.try_async(() => fetchUser(userId))
+    .map(user => ({ ...user, name: user.name.trim() }))
+    .and_then(user => user.name ? result.ok(user) : result.error(new Error("Invalid user name")))
+    .map(user => ({ ...user, lastUpdated: new Date() }))
+    .or_else(error => {
+      console.error("Failed to process user:", error.message);
+      return result.ok(createDefaultProfile(userId));
+    });
+}
+
+// Usage - only await the final result
+const profileResult = await processUserProfile("user123");
+```
+
+The `AsyncResult` maintains the same error handling patterns as synchronous `Result`, with errors propagating through the chain until handled by `or_else()` or resolved by `await`.
 
 # Example usage
 
@@ -373,12 +411,10 @@ async function fetchUserData(id: string): Promise<UserData | null> {
 **✅ Auto-fixed Code:**
 ```ts
 async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
-  const result = await result.try_async(async () => {
+  return result.try_async(async () => {
     const response = await fetch(`/api/users/${id}`);
     return await response.json();
-  });
-  
-  return result.map_err(error => {
+  }).map_err(error => {
     console.error('Failed to fetch user:', error);
     return error;
   });
@@ -423,7 +459,7 @@ async function uploadFile(file: File): Promise<UploadResult> {
 **✅ Auto-fixed Code:**
 ```ts
 async function uploadFile(file: File): Promise<Result<UploadResult, Error>> {
-  return await result.try_async(async () => {
+  return result.try_async(async () => {
     const response = await fetch('/upload', {
       method: 'POST',
       body: file
