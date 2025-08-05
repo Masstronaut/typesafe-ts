@@ -19,7 +19,7 @@ import { enforceResultUsage } from "./src/result/lint.ts";
  * Optional and Result usage patterns for type-safe functional programming.
  */
 // Define the custom plugin once
-const tsUtilsPlugin = {
+const TypesafeTSPlugin = {
   rules: {
     "enforce-optional-usage": enforceOptionalUsage,
     "enforce-result-usage": enforceResultUsage,
@@ -28,7 +28,7 @@ const tsUtilsPlugin = {
 
 export default tseslint.config(
   tseslint.configs.recommendedTypeChecked,
-  
+
   // Configuration for source files
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
@@ -41,7 +41,7 @@ export default tseslint.config(
       },
     },
     plugins: {
-      "typesafe-ts": tsUtilsPlugin,
+      "typesafe-ts": TypesafeTSPlugin,
     },
     rules: {
       // Disallow explicit any types
