@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert";
 
-import { result, type Result, type TryAsyncError, AsyncResult } from "./result.ts";
-
-// Test utility constants
-const OPERATION_STRING_MAX_LENGTH = 100;
-const TRUNCATED_SUFFIX = "...";
-const MAX_TRUNCATED_LENGTH = OPERATION_STRING_MAX_LENGTH + TRUNCATED_SUFFIX.length;
+import {
+  result,
+  type Result,
+  type TryAsyncError,
+  AsyncResult,
+} from "./result.ts";
 
 // Test utility functions
 function createSuccessResult<T>(value: T) {
@@ -20,16 +20,19 @@ function createErrorResult<T>(message: string) {
 function assertTryAsyncError(
   error: unknown,
   expectedMessage: string,
-  expectedOriginalType?: ErrorConstructor | SyntaxErrorConstructor
+  expectedOriginalType?: ErrorConstructor | SyntaxErrorConstructor,
 ): asserts error is TryAsyncError {
   assert.ok(error instanceof Error);
   const tryError = error as TryAsyncError;
   assert.strictEqual(tryError.name, "TryAsyncError");
-  assert.strictEqual(tryError.message, `Async operation failed: ${expectedMessage}`);
+  assert.strictEqual(
+    tryError.message,
+    `Async operation failed: ${expectedMessage}`,
+  );
   assert.ok(typeof tryError.operation === "string");
   assert.ok(typeof tryError.timestamp === "number");
   assert.ok(tryError.timestamp > 0);
-  
+
   if (expectedOriginalType) {
     assert.ok(tryError.originalError instanceof expectedOriginalType);
     if (tryError.originalError instanceof Error) {
@@ -40,8 +43,8 @@ function assertTryAsyncError(
 }
 
 function assertOperationResult<T, E extends Error>(
-  result: Result<T, E>, 
-  expectedValue: T
+  result: Result<T, E>,
+  expectedValue: T,
 ) {
   assert.ok(result.is_ok());
   if (result.is_ok()) {
@@ -49,10 +52,13 @@ function assertOperationResult<T, E extends Error>(
   }
 }
 
-function createMockFetch(responseData: unknown): () => Promise<{ json: () => Promise<unknown> }> {
-  return () => Promise.resolve({
-    json: () => Promise.resolve(responseData)
-  });
+function createMockFetch(
+  responseData: unknown,
+): () => Promise<{ json: () => Promise<unknown> }> {
+  return () =>
+    Promise.resolve({
+      json: () => Promise.resolve(responseData),
+    });
 }
 
 await test("Async Results", async (t) => {
@@ -394,31 +400,6 @@ await test("Async Results", async (t) => {
       assert.ok(res.error.operation.includes("=>"));
     });
 
-    await t.test(
-      "TryAsyncError operation string is truncated if too long",
-      async () => {
-        const asyncResult = createSuccessResult("initial");
-        const veryLongFunction = () => {
-          // This creates a very long function string when .toString() is called
-          // Using variables to make the function definition long
-          const x =
-            "this is a very long string that will make the function toString very long and should be truncated";
-          const y = "another very long string to make it even longer";
-          // Using the variables to avoid unused variable warnings
-          console.log(x, y);
-          throw new Error("test");
-        };
-
-        const chained = asyncResult.try_async(veryLongFunction);
-        const res = await chained;
-
-        assert.ok(res.is_error());
-        const error = res.error as TryAsyncError;
-        assert.ok(error.operation.length <= MAX_TRUNCATED_LENGTH);
-        assert.ok(error.operation.endsWith(TRUNCATED_SUFFIX));
-      },
-    );
-
     await t.test("TryAsyncError preserves stack trace", async () => {
       const asyncResult = createSuccessResult("initial");
       const chained = asyncResult.try_async(() => {
@@ -438,7 +419,7 @@ await test("Async Results", async (t) => {
     await t.test("Can fetch data and process it", async () => {
       const mockData = { name: "Luke Skywalker" };
       const mockFetch = createMockFetch(mockData);
-      
+
       const name = await result
         .try_async(mockFetch)
         .try_async((res) => res.json())
@@ -449,48 +430,64 @@ await test("Async Results", async (t) => {
   });
 
   await t.test("Edge cases and concurrent operations", async (t) => {
-    await t.test("concurrent async operations complete independently", async () => {
-      const operation1 = createSuccessResult("first").try_async(async (value) => {
-        await new Promise(resolve => setTimeout(resolve, 10));
-        return value.toUpperCase();
-      });
+    await t.test(
+      "concurrent async operations complete independently",
+      async () => {
+        const operation1 = createSuccessResult("first").try_async(
+          async (value) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            return value.toUpperCase();
+          },
+        );
 
-      const operation2 = createSuccessResult("second").try_async(async (value) => {
-        await new Promise(resolve => setTimeout(resolve, 5));
-        return value.toUpperCase();
-      });
+        const operation2 = createSuccessResult("second").try_async(
+          async (value) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            return value.toUpperCase();
+          },
+        );
 
-      const operation3 = createErrorResult<string>("third").try_async(async (value) => {
-        await new Promise(resolve => setTimeout(resolve, 15));
-        return value.toUpperCase();
-      });
+        const operation3 = createErrorResult<string>("third").try_async(
+          async (value) => {
+            await new Promise((resolve) => setTimeout(resolve, 15));
+            return value.toUpperCase();
+          },
+        );
 
-      const [result1, result2, result3] = await Promise.all([operation1, operation2, operation3]);
+        const [result1, result2, result3] = await Promise.all([
+          operation1,
+          operation2,
+          operation3,
+        ]);
 
-      assertOperationResult(result1, "FIRST");
-      assertOperationResult(result2, "SECOND");
-      assert.ok(result3.is_error());
-      assert.strictEqual(result3.error.message, "third");
-    });
+        assertOperationResult(result1, "FIRST");
+        assertOperationResult(result2, "SECOND");
+        assert.ok(result3.is_error());
+        assert.strictEqual(result3.error.message, "third");
+      },
+    );
 
-    await t.test("very long async chains maintain proper error propagation", async () => {
-      let chain = createSuccessResult(0);
-      
-      // Create a long chain of async operations
-      for (let i = 0; i < 50; i++) {
-        chain = chain.try_async(async (value) => {
-          await new Promise(resolve => setTimeout(resolve, 1));
-          return value + 1;
-        });
-      }
-      
-      const result = await chain;
-      assertOperationResult(result, 50);
-    });
+    await t.test(
+      "very long async chains maintain proper error propagation",
+      async () => {
+        let chain = createSuccessResult(0);
+
+        // Create a long chain of async operations
+        for (let i = 0; i < 50; i++) {
+          chain = chain.try_async(async (value) => {
+            await new Promise((resolve) => setTimeout(resolve, 1));
+            return value + 1;
+          });
+        }
+
+        const result = await chain;
+        assertOperationResult(result, 50);
+      },
+    );
 
     await t.test("async operations with rapid succession", async () => {
       const operations = [];
-      
+
       for (let i = 0; i < 10; i++) {
         const operation = createSuccessResult(i).try_async((value) => {
           return Promise.resolve(value * 2);
@@ -499,39 +496,48 @@ await test("Async Results", async (t) => {
       }
 
       const results = await Promise.all(operations);
-      
+
       results.forEach((result, index) => {
         assertOperationResult(result, index * 2);
       });
     });
 
-    await t.test("async result with immediate resolution maintains chaining", async () => {
-      const result = await createSuccessResult("immediate")
-        .try_async((value) => Promise.resolve(value.toUpperCase()))
-        .map((value) => value + "!")
-        .try_async((value) => Promise.resolve(value.repeat(2)));
+    await t.test(
+      "async result with immediate resolution maintains chaining",
+      async () => {
+        const result = await createSuccessResult("immediate")
+          .try_async((value) => Promise.resolve(value.toUpperCase()))
+          .map((value) => value + "!")
+          .try_async((value) => Promise.resolve(value.repeat(2)));
 
-      assertOperationResult(result, "IMMEDIATE!IMMEDIATE!");
-    });
+        assertOperationResult(result, "IMMEDIATE!IMMEDIATE!");
+      },
+    );
 
-    await t.test("mixed success and error operations in concurrent context", async () => {
-      const successOp = createSuccessResult("success")
-        .try_async(async (value) => {
-          await new Promise(resolve => setTimeout(resolve, 10));
-          return value.toUpperCase();
-        });
+    await t.test(
+      "mixed success and error operations in concurrent context",
+      async () => {
+        const successOp = createSuccessResult("success").try_async(
+          async (value) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            return value.toUpperCase();
+          },
+        );
 
-      const errorOp = createSuccessResult("initial")
-        .try_async(async () => {
-          await new Promise(resolve => setTimeout(resolve, 5));
+        const errorOp = createSuccessResult("initial").try_async(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
           throw new Error("Async failure");
         });
 
-      const [successResult, errorResult] = await Promise.all([successOp, errorOp]);
+        const [successResult, errorResult] = await Promise.all([
+          successOp,
+          errorOp,
+        ]);
 
-      assertOperationResult(successResult, "SUCCESS");
-      assert.ok(errorResult.is_error());
-      assertTryAsyncError(errorResult.error, "Async failure", Error);
-    });
+        assertOperationResult(successResult, "SUCCESS");
+        assert.ok(errorResult.is_error());
+        assertTryAsyncError(errorResult.error, "Async failure", Error);
+      },
+    );
   });
 });
