@@ -337,9 +337,40 @@ interface RetryError<ErrorType extends Error = Error> extends Error {
   errors: ErrorType[];
 }
 
+/**
+ * Error type returned by try_async operations when an async function throws or rejects.
+ * Contains comprehensive debugging information about the failed operation.
+ */
+class TryAsyncError extends Error {
+  constructor(operation: string, originalError?: unknown) {
+    super(
+      `Async operation failed: ${originalError instanceof Error
+        ? originalError.message
+        : String(originalError)
+      }`,
+    );
+    this.name = "TryAsyncError";
+    this.originalError = originalError;
+    this.operation = operation;
+    this.timestamp = Date.now();
+    // Only set cause if we have an Error
+    if (originalError instanceof Error) {
+      this.cause = originalError;
+      if (originalError.stack) {
+        this.stack = originalError.stack;
+      }
+    }
+  }
+  /** The original error/value that was thrown or caused the rejection */
+  originalError: unknown;
+  /** Description of the operation that failed */
+  operation: string;
+  /** Timestamp when the error occurred (milliseconds since epoch) */
+  timestamp: number;
+}
+
 class ResultImpl<ResultType, ErrorType extends Error>
-  implements IResult<ResultType, ErrorType>
-{
+  implements IResult<ResultType, ErrorType> {
   value: ResultType | NoneType;
   error: ErrorType | NoneType;
   constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -471,8 +502,7 @@ class ResultImpl<ResultType, ErrorType extends Error>
  * ```
  */
 class AsyncResult<ResultType, ErrorType extends Error>
-  implements PromiseLike<Result<ResultType, ErrorType>>
-{
+  implements PromiseLike<Result<ResultType, ErrorType>> {
   private promise: Promise<Result<ResultType, ErrorType>>;
 
   /**
@@ -528,8 +558,8 @@ class AsyncResult<ResultType, ErrorType extends Error>
   then<TResult1 = Result<ResultType, ErrorType>, TResult2 = never>(
     onfulfilled?:
       | ((
-          value: Result<ResultType, ErrorType>,
-        ) => TResult1 | PromiseLike<TResult1>)
+        value: Result<ResultType, ErrorType>,
+      ) => TResult1 | PromiseLike<TResult1>)
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
@@ -635,6 +665,91 @@ class AsyncResult<ResultType, ErrorType extends Error>
     fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
   ): AsyncResult<ResultType, NewErrorType> {
     const newPromise = this.promise.then((result) => result.or_else(fn));
+    return new AsyncResult(newPromise);
+  }
+
+  /**
+   * Executes an async function with the contained value if Ok, and wraps the result in a Result.
+   * If this AsyncResult is Error, the function is not called and the error is propagated.
+   * If the async function throws or rejects, the error is caught and wrapped in a TryAsyncError with detailed debugging information.
+   *
+   * @template NewResultType - The type of the value returned by the async function
+   * @param fn - Async function that takes the Ok value and returns a Promise
+   * @returns A new AsyncResult containing the result of the async function or a union of the original error and TryAsyncError
+   *
+   * @example
+   * ```typescript
+   * // Chain async operations with rich error information
+   * const userData = await result.try_async(() => fetch('/api/user/123'))
+   *   .try_async(response => response.json()) // Creates TryAsyncError if JSON parsing fails
+   *   .map(user => user.name)
+   *   .match(
+   *     name => console.log(`User: ${name}`),
+   *     error => {
+   *       if (error instanceof TryAsyncError) {
+   *         console.log(`Operation "${error.operation}" failed`);
+   *         console.log(`Original error:`, error.originalError);
+   *       }
+   *     }
+   *   );
+   * ```
+   */
+  try_async<NewResultType>(
+    fn: (value: ResultType) => Promise<NewResultType>,
+  ): AsyncResult<NewResultType, ErrorType | TryAsyncError>;
+
+  /**
+   * Executes an async function with the contained value if Ok, and wraps the result in a Result.
+   * If this AsyncResult is Error, the function is not called and the error is propagated.
+   * If the async function throws or rejects, the error is caught and passed to the provided error mapper.
+   *
+   * @template NewResultType - The type of the value returned by the async function
+   * @template NewErrorType - The type of the error returned by the error mapper
+   * @param fn - Async function that takes the Ok value and returns a Promise
+   * @param errorMapper - Function that maps the caught error to a specific error type
+   * @returns A new AsyncResult containing the result of the async function or a union of the original error and mapped error
+   *
+   * @example
+   * ```typescript
+   * // Chain async operations with custom error mapping
+   * const userData = await result.try_async(() => fetch('/api/user/123'))
+   *   .try_async(
+   *     response => response.json(),
+   *     error => new JsonParseError(`Failed to parse response: ${error}`)
+   *   )
+   *   .map(user => user.name);
+   * ```
+   */
+  try_async<NewResultType, NewErrorType extends Error>(
+    fn: (value: ResultType) => Promise<NewResultType>,
+    errorMapper: (error: unknown) => NewErrorType,
+  ): AsyncResult<NewResultType, ErrorType | NewErrorType>;
+
+  try_async<NewResultType, NewErrorType extends Error = TryAsyncError>(
+    fn: (value: ResultType) => Promise<NewResultType>,
+    errorMapper?: (error: unknown) => NewErrorType,
+  ): AsyncResult<NewResultType, ErrorType | NewErrorType | TryAsyncError> {
+    type PossibleErrors = ErrorType | NewErrorType | TryAsyncError;
+    const newPromise: Promise<Result<NewResultType, PossibleErrors>> =
+      this.promise
+        .then(async (result) => {
+          if (result.is_error()) {
+            return result as unknown as Result<NewResultType, PossibleErrors>;
+          }
+          const value = await fn(result.value);
+          return ResultImpl.ok<NewResultType, PossibleErrors>(value);
+        })
+        .catch((originalError: unknown) => {
+          if (errorMapper) {
+            return ResultImpl.error<NewResultType, PossibleErrors>(
+              errorMapper(originalError),
+            );
+          }
+
+          return ResultImpl.error<NewResultType, PossibleErrors>(
+            new TryAsyncError(fn.name || fn.toString(), originalError),
+          );
+        });
     return new AsyncResult(newPromise);
   }
 
@@ -1025,4 +1140,10 @@ const result = {
 
 Object.freeze(result);
 
-export { result, type Result, AsyncResult, type RetryError };
+export {
+  result,
+  type Result,
+  AsyncResult,
+  type RetryError,
+  type TryAsyncError,
+};
