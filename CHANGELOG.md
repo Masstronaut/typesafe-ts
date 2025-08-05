@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.1.0...v1.2.0) (2025-08-05)
+
+
+### Features
+
+* add AsyncResult with improved error handling and chaining support ([#16](https://github.com/Masstronaut/typesafe-ts/issues/16)) ([b994446](https://github.com/Masstronaut/typesafe-ts/commit/b9944468f3a5efaf8691f7f9c968b0c45853e14e))
+
 # [1.1.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.0.0...v1.1.0) (2025-07-16)
 
 
