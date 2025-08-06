@@ -21,26 +21,33 @@ jobs:
       - name: Build
         uses: ./.github/actions/build
 
+  update-coverage-badge:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/fix-coverage-badge'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Download coverage badge artifact
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/fix-coverage-badge'
         uses: actions/download-artifact@v4
         with:
           name: coverage-badge
           path: .
-
+          
       - name: Update coverage badge
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/fix-coverage-badge'
         run: |
           # Store coverage badge in temp location
           cp coverage-badge.json /tmp/coverage-badge.json
-
+          
           # Configure git
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
+          
           # Remove the local coverage-badge.json to avoid conflicts
           rm -f coverage-badge.json
-
+          
           # Fetch and checkout coverage branch
           git fetch origin coverage || echo "Coverage branch doesn't exist yet"
           if git show-ref --verify --quiet refs/remotes/origin/coverage; then
@@ -49,10 +56,14 @@ jobs:
           else
             git checkout --orphan coverage
           fi
-
+          
+          # Clear everything except git files
+          git rm -rf . || true
+          rm -rf * .env* .gitignore .npmignore || true
+          
           # Add the coverage badge
           cp /tmp/coverage-badge.json coverage-badge.json
-
+          
           # Commit and push
           git add coverage-badge.json
           if git diff --staged --quiet; then
