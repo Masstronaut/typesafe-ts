@@ -21,25 +21,47 @@ jobs:
       - name: Build
         uses: ./.github/actions/build
         
+      - name: Download coverage badge artifact
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/fix-coverage-badge'
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-badge
+          path: .
+          
       - name: Update coverage badge
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/fix-coverage-badge'
         run: |
-          # Download the coverage badge artifact
+          # Store coverage badge in temp location
           cp coverage-badge.json /tmp/coverage-badge.json
           
           # Configure git
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Create or switch to coverage branch
-          git fetch origin coverage || git checkout --orphan coverage
-          git checkout coverage || git checkout --orphan coverage
+          # Remove the local coverage-badge.json to avoid conflicts
+          rm -f coverage-badge.json
           
-          # Clear everything except the coverage file
+          # Fetch and checkout coverage branch
+          git fetch origin coverage || echo "Coverage branch doesn't exist yet"
+          if git show-ref --verify --quiet refs/remotes/origin/coverage; then
+            git checkout coverage
+            git pull origin coverage
+          else
+            git checkout --orphan coverage
+          fi
+          
+          # Clear everything except git files
           git rm -rf . || true
+          rm -rf * .env* .gitignore .npmignore || true
+          
+          # Add the coverage badge
           cp /tmp/coverage-badge.json coverage-badge.json
           
           # Commit and push
           git add coverage-badge.json
-          git commit -m "Update coverage badge [skip ci]" || exit 0
-          git push origin coverage
+          if git diff --staged --quiet; then
+            echo "No changes to coverage badge"
+          else
+            git commit -m "Update coverage badge [skip ci]"
+            git push origin coverage
+          fi
