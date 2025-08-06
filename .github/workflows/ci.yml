@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, chore/fix-coverage-badge]
   pull_request:
     branches: ['**']
     types: [opened, synchronize, reopened, ready_for_review]
