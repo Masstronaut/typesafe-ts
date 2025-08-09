@@ -23,6 +23,12 @@ interface OptionalWithValue<ValueType> {
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
+type Nullable<T> = [T] extends [null | undefined]
+  ? "Error: Value provided to `optional.from_nullable()` is always nullable. To create an empty optional, use `optional.none()`."
+  : [T] extends [NonNullable<T>]
+  ? "Error: Value provided to `optional.from_nullable()` isn't nullable. To create an optional with a value, use `optional.some(value)`."
+  : T;
+
 /**
  * The public interface of an Optional value. An Optional either contains a value of type `ValueType` or is empty.
  *
@@ -306,6 +312,39 @@ export const optional = {
       return OptionalImpl.none();
     }
     return OptionalImpl.some(result);
+  },
+
+  /**
+   * Creates an Optional from a value that may be null or undefined.
+   * If the value is null or undefined, returns a none Optional.
+   * Otherwise, returns a some Optional with the value.
+   *
+   * @template T - The type of the value (must include null and/or undefined)
+   * @param value - A value that may be null or undefined
+   * @returns An Optional containing either the value or none
+   *
+   * @example
+   * ```typescript
+   * // Working with nullable values
+   * function findUser(id: string): User | null {
+   *   return users.find(u => u.id === id) || null;
+   * }
+   *
+   * const user = optional.from_nullable(findUser("123"));
+   * if (user.is_some()) {
+   *   console.log(user.value.name);
+   * }
+   *
+   * // Direct nullable value conversion
+   * const maybeNumber: number | undefined = parseFloat(input);
+   * const result = optional.from_nullable(maybeNumber);
+   * ```
+   */
+  from_nullable: <T>(value: Nullable<T>): Optional<NonNullable<T>> => {
+    if (value === null || value === undefined) {
+      return OptionalImpl.none();
+    }
+    return OptionalImpl.some(value as NonNullable<T>);
   },
 
   /**
