@@ -23,6 +23,14 @@ interface OptionalWithValue<ValueType> {
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
+/**
+ * Nullable<T> is used to provide better error messages for `optional.from_nullable()`.
+ * 
+ * The tuple wrapping technique (`[T] extends [...]`) is used here to prevent
+ * distributive conditional types, which would otherwise cause the conditional
+ * to be applied to each member of a union type individually. By wrapping T in a
+ * tuple, we ensure the check is performed on the whole type at once.
+ */
 type Nullable<T> = [T] extends [null | undefined]
   ? "Error: Value provided to `optional.from_nullable()` is always nullable. To create an empty optional, use `optional.none()`."
   : [T] extends [NonNullable<T>]
