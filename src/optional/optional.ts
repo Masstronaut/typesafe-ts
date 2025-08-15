@@ -24,6 +24,20 @@ const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
 /**
+ * Nullable<T> is used to provide better error messages for `optional.from_nullable()`.
+ * 
+ * The tuple wrapping technique (`[T] extends [...]`) is used here to prevent
+ * distributive conditional types, which would otherwise cause the conditional
+ * to be applied to each member of a union type individually. By wrapping T in a
+ * tuple, we ensure the check is performed on the whole type at once.
+ */
+type Nullable<T> = [T] extends [null | undefined]
+  ? "Error: Value provided to `optional.from_nullable()` is always nullable. To create an empty optional, use `optional.none()`."
+  : [T] extends [NonNullable<T>]
+  ? "Error: Value provided to `optional.from_nullable()` isn't nullable. To create an optional with a value, use `optional.some(value)`."
+  : T;
+
+/**
  * The public interface of an Optional value. An Optional either contains a value of type `ValueType` or is empty.
  *
  * Optionals should be constructed using `optional.some()` or `optional.none<ValueType>()`.
@@ -276,28 +290,26 @@ export const optional = {
    * If the function returns null or undefined, returns a none Optional.
    * Otherwise, returns a some Optional with the return value.
    *
+   * @deprecated Use `optional.from_nullable()` for direct nullable values instead.
+   * In the next major release, `from()` will only accept nullable values directly
+   * instead of invoking functions, matching the behavior of `from_nullable()`.
+   *
    * @template T - The return type of the function (excluding null/undefined)
    * @param fn - A function that may return null or undefined
    * @returns An Optional containing either the function's return value or none
    *
    * @example
    * ```typescript
-   * // Working with a function that might return null
-   * function findUser(id: string): User | null {
-   *   return users.find(u => u.id === id) || null;
-   * }
-   *
+   * // DEPRECATED: Current usage
    * const userResult = optional.from(() => findUser("123"));
-   * if (userResult.is_some()) {
-   *   console.log(userResult.value.name);
-   * }
-   *
-   * // Converting existing nullable APIs
    * const element = optional.from(() => document.getElementById('myId'));
-   * const parsed = optional.from(() => {
-   *   const result = parseInt(userInput);
-   *   return isNaN(result) ? null : result;
-   * });
+   *
+   * // PREFERRED: Use from_nullable with values to avoid the function call overhead
+   * const userResult = optional.from_nullable(findUser("123"));
+   * const element = optional.from_nullable(document.getElementById('myId'));
+   *
+   * // FUTURE: In next major release, from_nullable() will be renamed to from()
+   * const userResult = optional.from(findUser("123")); // Will be the new behavior
    * ```
    */
   from: <T>(fn: () => T | null | undefined): Optional<NonNullable<T>> => {
@@ -306,6 +318,39 @@ export const optional = {
       return OptionalImpl.none();
     }
     return OptionalImpl.some(result);
+  },
+
+  /**
+   * Creates an Optional from a value that may be null or undefined.
+   * If the value is null or undefined, returns a none Optional.
+   * Otherwise, returns a some Optional with the value.
+   *
+   * @template T - The type of the value (must include null and/or undefined)
+   * @param value - A value that may be null or undefined
+   * @returns An Optional containing either the value or none
+   *
+   * @example
+   * ```typescript
+   * // Working with nullable values
+   * function findUser(id: string): User | null {
+   *   return users.find(u => u.id === id) || null;
+   * }
+   *
+   * const user = optional.from_nullable(findUser("123"));
+   * if (user.is_some()) {
+   *   console.log(user.value.name);
+   * }
+   *
+   * // Direct nullable value conversion
+   * const maybeNumber: number | undefined = parseFloat(input);
+   * const result = optional.from_nullable(maybeNumber);
+   * ```
+   */
+  from_nullable: <T>(value: Nullable<T>): Optional<NonNullable<T>> => {
+    if (value === null || value === undefined) {
+      return OptionalImpl.none();
+    }
+    return OptionalImpl.some(value as NonNullable<T>);
   },
 
   /**

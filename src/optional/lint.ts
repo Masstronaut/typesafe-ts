@@ -21,7 +21,7 @@ type Options = [
   },
 ];
 
-type MessageIds = "noNullableReturn" | "useOptionalFrom" | "noNullableUnion";
+type MessageIds = "noNullableReturn" | "useOptionalFromNullable" | "noNullableUnion";
 
 const createRule = ESLintUtils.RuleCreator(
   () =>
@@ -33,7 +33,8 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * This rule:
  * - Disallows functions returning `T | null` or `T | undefined`
- * - Suggests using `optional.from()` when calling functions that return nullable types
+ * - Suggests using `optional.from_nullable()` for direct function calls that return nullable types
+ * - Suggests using `optional.from()` for complex expressions that evaluate to nullable values
  * - Provides auto-fix suggestions where possible
  */
 export const enforceOptionalUsage = createRule<Options, MessageIds>({
@@ -66,8 +67,8 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     messages: {
       noNullableReturn:
         "Functions should return Optional<{{type}}> instead of {{type}} | null | undefined. Change the return type and update return statements to use optional.some(value) or optional.none().",
-      useOptionalFrom:
-        "Calls to functions returning nullable types should be wrapped with optional.from(). This ensures type-safe handling of non-values and avoids propagating them through the code.",
+      useOptionalFromNullable:
+        "Function calls and other expressions that evaluate to nullable values should be wrapped in optional.from_nullable().",
       noNullableUnion:
         "Union types with null/undefined should use Optional<{{type}}> instead of {{type}} | null | undefined. Change the type annotation and initialize with optional.some(value) or optional.none().",
     },
@@ -153,7 +154,8 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
           parent.callee.object.name === "optional" &&
           parent.callee.property.type === AST_NODE_TYPES.Identifier &&
           (parent.callee.property.name === "from" ||
-            parent.callee.property.name === "from_async")
+            parent.callee.property.name === "from_async" ||
+            parent.callee.property.name === "from_nullable")
         ) {
           return true;
         }
@@ -516,21 +518,35 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
       // Check calls to functions that might return null/undefined
       CallExpression(node: TSESTree.CallExpression) {
-        // Skip if this is already an optional.from() or optional.from_async() call
+        // Skip if this is already an optional.from(), optional.from_async(), or optional.from_nullable() call
         if (
           node.callee.type === AST_NODE_TYPES.MemberExpression &&
           node.callee.object.type === AST_NODE_TYPES.Identifier &&
           node.callee.object.name === "optional" &&
           node.callee.property.type === AST_NODE_TYPES.Identifier &&
           (node.callee.property.name === "from" ||
-            node.callee.property.name === "from_async")
+            node.callee.property.name === "from_async" ||
+            node.callee.property.name === "from_nullable")
         ) {
           return;
         }
 
-        // Skip if this call is inside an optional.from() arrow function
+        // Skip if this call is inside an optional.from() or optional.from_async() arrow function
+        // or if it's a direct argument to optional.from_nullable()
         let parent: TSESTree.Node = node.parent;
         while (parent) {
+          // Check for optional.from_nullable(thisCall)
+          if (
+            parent.type === AST_NODE_TYPES.CallExpression &&
+            parent.callee.type === AST_NODE_TYPES.MemberExpression &&
+            parent.callee.object.type === AST_NODE_TYPES.Identifier &&
+            parent.callee.object.name === "optional" &&
+            parent.callee.property.type === AST_NODE_TYPES.Identifier &&
+            parent.callee.property.name === "from_nullable"
+          ) {
+            return;
+          }
+          // Check for optional.from(() => thisCall) or optional.from_async(() => thisCall)
           if (
             parent.type === AST_NODE_TYPES.ArrowFunctionExpression &&
             parent.parent?.type === AST_NODE_TYPES.CallExpression &&
@@ -576,14 +592,14 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         if (nullableAPIs.includes(functionName) || isStringMatch) {
           context.report({
             node,
-            messageId: "useOptionalFrom" as const,
+            messageId: "useOptionalFromNullable" as const,
             fix: autoFix
               ? (fixer) => {
                 const sourceCode = context.sourceCode;
                 const callText = sourceCode.getText(node);
                 return fixer.replaceText(
                   node,
-                  `optional.from(() => ${callText})`,
+                  `optional.from_nullable(${callText})`,
                 );
               }
               : null,

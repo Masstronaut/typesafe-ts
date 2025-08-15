@@ -137,3 +137,6 @@ docs/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# MacOS Finder directory attributes
+.DS_Store

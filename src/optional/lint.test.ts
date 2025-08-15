@@ -368,10 +368,10 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const element = document.getElementById('test');`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const element = optional.from(() => document.getElementById('test'));`,
+      output: `const element = optional.from_nullable(document.getElementById('test'));`,
     },
 
     {
@@ -379,10 +379,10 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const element = document.querySelector('.class');`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const element = optional.from(() => document.querySelector('.class'));`,
+      output: `const element = optional.from_nullable(document.querySelector('.class'));`,
     },
 
     {
@@ -390,10 +390,10 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const item = array.find(x => x.id === 'test');`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const item = optional.from(() => array.find(x => x.id === 'test'));`,
+      output: `const item = optional.from_nullable(array.find(x => x.id === 'test'));`,
     },
 
     {
@@ -401,10 +401,10 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const lastItem = items.pop();`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const lastItem = optional.from(() => items.pop());`,
+      output: `const lastItem = optional.from_nullable(items.pop());`,
     },
 
     {
@@ -412,10 +412,10 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       code: `const matches = text.match(/pattern/);`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const matches = optional.from(() => text.match(/pattern/));`,
+      output: `const matches = optional.from_nullable(text.match(/pattern/));`,
     },
 
     {
@@ -553,27 +553,27 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
       ];`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
       output: `const elements = [
-        optional.from(() => document.getElementById('first')),
-        optional.from(() => document.querySelector('.second'))
+        optional.from_nullable(document.getElementById('first')),
+        optional.from_nullable(document.querySelector('.second'))
       ];`,
     },
 
     {
       name: "Direct function call to nullable API",
-      code: `const result = find(item => item.id === 'test');`,
+      code: `const result = array.find(item => item.id === 'test');`,
       errors: [
         {
-          messageId: "useOptionalFrom",
+          messageId: "useOptionalFromNullable",
         },
       ],
-      output: `const result = optional.from(() => find(item => item.id === 'test'));`,
+      output: `const result = optional.from_nullable(array.find(item => item.id === 'test'));`,
     },
 
     {
