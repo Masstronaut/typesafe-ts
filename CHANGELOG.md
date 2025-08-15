@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.2.0...v1.3.0) (2025-08-15)
+
+
+### Features
+
+* **optional:** add from_nullable() method for direct nullable value conversion ([6c04cca](https://github.com/Masstronaut/typesafe-ts/commit/6c04cca23a0689b32d63a31902ae635621790888))
+
 # [1.2.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.1.0...v1.2.0) (2025-08-05)
 
 
