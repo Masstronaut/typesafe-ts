@@ -447,6 +447,17 @@ await test("Optional", async (t) => {
       // @ts-expect-error: Should reject only undefined type
       optional.from_nullable(undefined);
     });
+
+    await t.test(
+      "produces a typescript error when passed an arrow function",
+      () => {
+        // This test ensures that current calls to `optional.from()` will loudly error
+        // when its behavior is updated in the next major release to match from_nullable().
+        // This way any users still using `optional.from()` will know to update their code.
+        // @ts-expect-error: the current usage of optional.from() should produce an error
+        optional.from_nullable(() => "test");
+      },
+    );
   });
 
   await t.test("from_async() method", async (t) => {

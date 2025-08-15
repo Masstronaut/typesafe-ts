@@ -131,22 +131,22 @@ To help teams consistently adopt `Optional` patterns and avoid mixing nullable t
 The ESLint rule is included with the Optional utility. To use it in your project with ESLint flat config:
 
 ```js eslint.config.js
-import { enforceOptionalUsage } from './src/optional/eslint-rule.ts';
+import { enforceOptionalUsage } from "./src/optional/eslint-rule.ts";
 
 export default [
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      'optional': {
+      optional: {
         rules: {
-          'enforce-optional-usage': enforceOptionalUsage
-        }
-      }
+          "enforce-optional-usage": enforceOptionalUsage,
+        },
+      },
     },
     rules: {
-      'optional/enforce-optional-usage': 'error'
-    }
-  }
+      "optional/enforce-optional-usage": "error",
+    },
+  },
 ];
 ```
 
@@ -194,12 +194,12 @@ The rule identifies three types of violations and provides automatic fixes where
 ```ts
 // ❌ ESLint Error: Functions should return Optional<User> instead of User | null | undefined
 function findUser(id: string): User | null {
-  return users.find(u => u.id === id) ?? null;
+  return users.find((u) => u.id === id) ?? null;
 }
 
 // ✅ Fixed: Use Optional<T> return type
 function findUser(id: string): Optional<User> {
-  const user = users.find(u => u.id === id);
+  const user = users.find((u) => u.id === id);
   return user ? optional.some(user) : optional.none();
 }
 ```
@@ -214,12 +214,12 @@ function findUser(id: string): Optional<User> {
 
 ```ts
 // ❌ ESLint Error: Function calls and other expressions that evaluate to nullable values should be wrapped in optional.from_nullable()
-const element = document.getElementById('my-element');  // returns HTMLElement | null
-const user = users.find(u => u.active);                // returns User | undefined
+const element = document.getElementById("my-element"); // returns HTMLElement | null
+const user = users.find((u) => u.active); // returns User | undefined
 
 // ✅ Fixed: Wrap with optional.from_nullable()
-const element = optional.from_nullable(document.getElementById('my-element'));
-const user = optional.from_nullable(users.find(u => u.active));
+const element = optional.from_nullable(document.getElementById("my-element"));
+const user = optional.from_nullable(users.find((u) => u.active));
 ```
 
 **Auto-fix:** Function calls are automatically wrapped with `optional.from_nullable(originalCall())`.
@@ -231,6 +231,7 @@ const user = optional.from_nullable(users.find(u => u.active));
 **Note:** `optional.from()` is deprecated. Use `optional.from_nullable()` for direct nullable values instead.
 
 The rule recognizes common nullable-returning APIs including:
+
 - DOM methods: `getElementById`, `querySelector`, `getElementsByClassName`, `getElementsByTagName`
 - Array methods: `find`, `pop`, `shift`
 - String methods: `match`
@@ -294,7 +295,7 @@ The `optional.from()` method is deprecated in favor of `optional.from_nullable()
 
 ### Future Breaking Change
 
-In the next major release, `optional.from()` will be renamed to accept nullable values directly, matching the current behavior of `from_nullable()`:
+In the next major release, `optional.from_nullable()` will be renamed to `optional.from()`, taking over the name of the currently deprecated `optional.from()`.:
 
 ```typescript
 // Future behavior (next major version)
@@ -303,5 +304,7 @@ const element = optional.from(document.getElementById("myId"));
 ```
 
 To prepare for this change:
-1. Replace all `optional.from(() => expr)` with `optional.from_nullable(expr)` 
+
+1. Replace all `optional.from(() => expr)` with `optional.from_nullable(expr)`
 2. Update your ESLint rule to automatically suggest `from_nullable()` for nullable expressions
+3. When the next major version is released, shorten all `from_nullable()` calls to `from()`
