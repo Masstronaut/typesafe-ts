@@ -1,0 +1,65 @@
+/** @type {Partial<import("typedoc").TypeDocOptions>} */
+const config = {
+  // entryPoints are relative to the working directory, unlike all the other settings
+  entryPoints: ["src/index.ts"],
+  // the `out` path is relative to the config file
+  out: "../docs",
+  name: "typesafe-ts API Documentation",
+  theme: "default",
+  includeVersion: true,
+  excludePrivate: true,
+  excludeProtected: true,
+  excludeInternal: true,
+  // the `readme` path is relative to the config file
+  readme: "../readme.md",
+  // the `tsconfig` path is relative to the config file
+  tsconfig: "../tsconfig.json",
+  gitRevision: "main",
+  gitRemote: "origin",
+  hideGenerator: false,
+  sort: ["source-order"],
+  kindSortOrder: [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Method",
+    "Accessor",
+    "Parameter",
+    "TypeParameter",
+    "Reference",
+  ],
+  categorizeByGroup: false,
+  searchInComments: true,
+  cleanOutputDir: true,
+  treatWarningsAsErrors: false,
+  inlineTags: ["@inlineType", "@inheritDoc", "@useDeclaredType"],
+  validation: {
+    notExported: false,
+    invalidLink: true,
+    notDocumented: false,
+  },
+  highlightLanguages: [
+    "bash",
+    "console",
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "json5",
+    "tsx",
+    "typescript",
+  ],
+};
+
+export default config;
