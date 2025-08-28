@@ -68,9 +68,9 @@ export default tseslint.config(
     },
   },
 
-  // Configuration for root config files
+  // Configuration for root config files and .config directory
   {
-    files: ["*.ts"],
+    files: ["*.ts", ".config/**/*.ts", ".config/**/*.js"],
     languageOptions: {
       parserOptions: {
         ecmaVersion: 2020,
