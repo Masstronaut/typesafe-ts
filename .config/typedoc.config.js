@@ -1,19 +1,16 @@
 /** @type {Partial<import("typedoc").TypeDocOptions>} */
 const config = {
-  // entryPoints are relative to the working directory, unlike all the other settings
-  entryPoints: ["src/index.ts"],
-  // the `out` path is relative to the config file
+  // Paths relative to the config file location
+  entryPoints: ["../src/index.ts"],
   out: "../docs",
+  readme: "../readme.md",
+  tsconfig: "../tsconfig.json",
   name: "typesafe-ts API Documentation",
   theme: "default",
   includeVersion: true,
   excludePrivate: true,
   excludeProtected: true,
   excludeInternal: true,
-  // the `readme` path is relative to the config file
-  readme: "../readme.md",
-  // the `tsconfig` path is relative to the config file
-  tsconfig: "../tsconfig.json",
   gitRevision: "main",
   gitRemote: "origin",
   hideGenerator: false,
