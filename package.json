@@ -40,7 +40,7 @@
     "docs:serve": "typedoc src/index.ts --watch",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
-    "prepare": "husky"
+    "prepare": "husky .config/husky"
   },
   "description": "TypeScript utilities for type-safe error handling and optional values",
   "keywords": [
