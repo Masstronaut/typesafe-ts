@@ -236,8 +236,6 @@ await test("Result", async (t) => {
       const errorResult = result.error<string, Error>(error);
       const transformed = errorResult.map(() => {
         assert.fail("Map function should not run on Error result");
-        // @ts-expect-error (unreachable code)
-        return "TRANSFORMED";
       });
 
       assert.ok(transformed.is_error());
@@ -267,8 +265,6 @@ await test("Result", async (t) => {
       const okResult = result.ok<string, Error>(value);
       const transformed = okResult.map_err(() => {
         assert.fail("Map_err function should not run on Ok result");
-        // @ts-expect-error (unreachable code)
-        return new Error("Should not happen");
       });
 
       assert.ok(transformed.is_ok());
@@ -321,8 +317,6 @@ await test("Result", async (t) => {
       const errorResult = result.error<string, Error>(error);
       const chained = errorResult.and_then(() => {
         assert.fail("And_then function should not run on Error result");
-        // @ts-expect-error (unreachable code)
-        return result.ok<number, Error>(42);
       });
 
       assert.ok(chained.is_error());
@@ -349,8 +343,6 @@ await test("Result", async (t) => {
       const okResult = result.ok<string, Error>(value);
       const fallback = okResult.or_else(() => {
         assert.fail("Or_else function should not run on Ok result");
-        // @ts-expect-error (unreachable code)
-        return result.ok<string, Error>("Should not happen");
       });
 
       assert.ok(fallback.is_ok());
@@ -391,15 +383,11 @@ await test("Result", async (t) => {
       const error = new Error("Test error");
       const chainedResult = result
         .error<string, Error>(error)
-        .map(() => {
+        .map((): string => {
           assert.fail("Should not execute");
-          // @ts-expect-error (unreachable code)
-          return "transformed";
         })
         .and_then(() => {
           assert.fail("Should not execute");
-          // @ts-expect-error (unreachable code)
-          return result.ok<number, Error>(42);
         });
 
       assert.ok(chainedResult.is_error());
@@ -683,23 +671,20 @@ await test("Result", async (t) => {
       },
     );
 
-    await t.test(
-      "result.try_async() preserves async Error types",
-      async () => {
-        const customError = new RangeError("Custom range error");
-        // eslint-disable-next-line @typescript-eslint/require-await
-        const asyncThrowingFn = async () => {
-          throw customError;
-        };
-        const res = await result.try_async(asyncThrowingFn);
+    await t.test("result.try_async() preserves async Error types", async () => {
+      const customError = new RangeError("Custom range error");
+      // eslint-disable-next-line @typescript-eslint/require-await
+      const asyncThrowingFn = async () => {
+        throw customError;
+      };
+      const res = await result.try_async(asyncThrowingFn);
 
-        assert.ok(res.is_error());
-        if (res.is_error()) {
-          assert.strictEqual(res.error, customError);
-          assert.ok(res.error instanceof RangeError);
-        }
-      },
-    );
+      assert.ok(res.is_error());
+      if (res.is_error()) {
+        assert.strictEqual(res.error, customError);
+        assert.ok(res.error instanceof RangeError);
+      }
+    });
 
     await t.test(
       "result.try_async() properly awaits async operations",
@@ -1021,6 +1006,293 @@ await test("Result", async (t) => {
         matchResult,
         "Failed with 2 errors: Failed after 2 attempts.",
       );
+    });
+  });
+
+  await t.test("Enhanced Type Transformation Matrix", async (t) => {
+    // Custom error types for testing type transformations
+    class ValidationError extends Error {
+      code: string;
+      constructor(message: string, code: string) {
+        super(message);
+        this.name = "ValidationError";
+        this.code = code;
+      }
+    }
+
+    class NetworkError extends Error {
+      statusCode: number;
+      constructor(message: string, statusCode: number) {
+        super(message);
+        this.name = "NetworkError";
+        this.statusCode = statusCode;
+      }
+    }
+
+    const andThenFunctions = {
+      okNewType: (x: string) => result.ok<number, Error>(x.length),
+      errNewType: () =>
+        result.error<string, ValidationError>(
+          new ValidationError("validation failed", "VAL001"),
+        ),
+      okNewBothTypes: (x: string) =>
+        result.ok<boolean, NetworkError>(x.length > 0),
+      errNewBothTypes: () =>
+        result.error<boolean, NetworkError>(
+          new NetworkError("network failed", 500),
+        ),
+      okSameTypes: (x: string) => result.ok<string, Error>("transformed: " + x),
+      errSameTypes: () =>
+        result.error<string, Error>(new Error("same type error")),
+    };
+
+    const orElseFunctions = {
+      okNewType: () => result.ok<number, Error>(42),
+      errNewType: () =>
+        result.error<string, ValidationError>(
+          new ValidationError("fallback failed", "VAL002"),
+        ),
+      okNewBothTypes: () => result.ok<boolean, NetworkError>(true),
+      errNewBothTypes: () =>
+        result.error<boolean, NetworkError>(
+          new NetworkError("fallback network error", 503),
+        ),
+      okSameTypes: () => result.ok<string, Error>("fallback value"),
+      errSameTypes: () =>
+        result.error<string, Error>(new Error("fallback error")),
+    };
+
+    // Test input results
+    const okResult = result.ok<string, Error>("hello");
+    const errorResult = result.error<string, Error>(
+      new Error("original error"),
+    );
+
+    await t.test("and_then() type transformations", async (t) => {
+      await t.test(
+        "Ok Result and_then() creates correct union error types",
+        () => {
+          const transformed = okResult.and_then(andThenFunctions.errNewType);
+          // Result should be Result<string, Error | ValidationError>
+
+          assert.ok(transformed.is_error());
+          const unionError: Error | ValidationError = transformed.error;
+          assert.ok(unionError);
+
+          // @ts-expect-error - Error | ValidationError is not assignable to ValidationError
+          const justValidationError: ValidationError = transformed.error;
+          assert.ok(justValidationError); // Use the variable to avoid unused variable error
+        },
+      );
+
+      await t.test(
+        "Error Result and_then() preserves union error types",
+        () => {
+          const transformed = errorResult.and_then(andThenFunctions.errNewType);
+          // Result should be Result<string, Error | ValidationError>
+
+          assert.ok(transformed.is_error());
+          const unionError: Error | ValidationError = transformed.error;
+          assert.ok(unionError);
+
+          // @ts-expect-error - Error | ValidationError is not assignable to ValidationError
+          const justValidationError: ValidationError = transformed.error;
+          assert.ok(justValidationError); // Use the variable to avoid unused variable error
+        },
+      );
+
+      await t.test("and_then() with new result and error types", () => {
+        const transformed = okResult.and_then(andThenFunctions.okNewBothTypes);
+        // Result should be Result<boolean, Error | NetworkError>
+
+        assert.ok(transformed.is_ok());
+        const boolValue: boolean = transformed.value;
+        assert.ok(typeof boolValue === "boolean");
+
+        // @ts-expect-error - boolean is not assignable to string
+        const stringValue: string = transformed.value;
+        assert.ok(stringValue); // Use the variable to avoid unused variable error
+
+        if (transformed.is_error()) {
+          // it's not, but this allows us to validate types
+          const unionError: Error | NetworkError = transformed.error;
+          assert.ok(unionError);
+        }
+      });
+    });
+
+    await t.test("or_else() type transformations", async (t) => {
+      await t.test(
+        "Error Result or_else() creates correct union result types",
+        () => {
+          const transformed = errorResult.or_else(orElseFunctions.okNewType);
+          // Result should be Result<string | number, Error>
+
+          assert.ok(transformed.is_ok());
+          const unionValue: string | number = transformed.value;
+          assert.ok(unionValue);
+
+          // @ts-expect-error - string | number is not assignable to string
+          const justString: string = transformed.value;
+          assert.ok(justString); // Use the variable to avoid unused variable error
+
+          // @ts-expect-error - string | number is not assignable to number
+          const justNumber: number = transformed.value;
+          assert.ok(justNumber); // Use the variable to avoid unused variable error
+        },
+      );
+
+      await t.test("Ok Result or_else() preserves union result types", () => {
+        // Test that ok result maintains union type even when function not called
+        const transformed = okResult.or_else(orElseFunctions.okNewType);
+        // Result should be Result<string | number, Error>
+
+        assert.ok(transformed.is_ok());
+        const unionValue: string | number = transformed.value;
+        assert.ok(unionValue);
+
+        // @ts-expect-error - string | number is not assignable to number
+        const justNumber: number = transformed.value;
+        assert.ok(justNumber); // Use the variable to avoid unused variable error
+      });
+
+      await t.test("or_else() with new result and error types", () => {
+        // Test scenario c: function returns Result<boolean, NetworkError>
+        const transformed = errorResult.or_else(orElseFunctions.okNewBothTypes);
+        // Result should be Result<string | boolean, NetworkError>
+
+        assert.ok(transformed.is_ok());
+        const unionValue: string | boolean = transformed.value;
+        assert.ok(unionValue);
+
+        // @ts-expect-error - string | boolean is not assignable to string
+        const justString: string = transformed.value;
+        assert.ok(justString); // Use the variable to avoid unused variable error
+
+        // @ts-expect-error - string | boolean is not assignable to boolean
+        const justBoolean: boolean = transformed.value;
+        assert.ok(justBoolean); // Use the variable to avoid unused variable error
+      });
+    });
+
+    await t.test("Complex chaining type verification", async (t) => {
+      await t.test("chained and_then() accumulates error types", () => {
+        const chainedResult = okResult
+          .and_then(andThenFunctions.okNewType) // Result<number, Error>
+          .and_then(() =>
+            result.error<string, ValidationError>(
+              new ValidationError("chain error", "CHAIN001"),
+            ),
+          ); // Result<string, Error | ValidationError>
+
+        assert.ok(chainedResult.is_error());
+        const unionError: Error | ValidationError = chainedResult.error;
+        assert.ok(unionError);
+
+        // @ts-expect-error - Error | ValidationError is not assignable to ValidationError
+        const justValidationError: ValidationError = chainedResult.error;
+        assert.ok(justValidationError); // Use the variable to avoid unused variable error
+      });
+
+      await t.test("chained or_else() accumulates result types", () => {
+        const chainedResult = errorResult
+          .or_else(orElseFunctions.okNewType) // Result<string | number, Error>
+          .or_else(() => result.ok<boolean, NetworkError>(false)); // Result<string | number | boolean, NetworkError>
+
+        assert.ok(chainedResult.is_ok());
+        // Result type should be string | number | boolean
+        const unionValue: string | number | boolean = chainedResult.value;
+        assert.ok(unionValue);
+
+        // @ts-expect-error - string | number | boolean is not assignable to string
+        const justString: string = chainedResult.value;
+        assert.ok(justString); // Use the variable to avoid unused variable error
+
+        // @ts-expect-error - string | number | boolean is not assignable to number
+        const justNumber: number = chainedResult.value;
+        assert.ok(justNumber); // Use the variable to avoid unused variable error
+
+        // @ts-expect-error - string | number | boolean is not assignable to boolean
+        const justBoolean: boolean = chainedResult.value;
+        assert.ok(justBoolean); // Use the variable to avoid unused variable error
+      });
+    });
+
+    await t.test("AsyncResult type consistency", async (t) => {
+      await t.test(
+        "AsyncResult.and_then() maintains same type behavior",
+        async () => {
+          const asyncOkResult = result.try_async(() =>
+            Promise.resolve("async hello"),
+          );
+          const transformed = asyncOkResult.and_then(
+            andThenFunctions.errNewType,
+          );
+          const awaited = await transformed;
+
+          assert.ok(awaited.is_error());
+          // Should have same union error type as sync version
+          const unionError: Error | ValidationError = awaited.error;
+          assert.ok(unionError);
+
+          // @ts-expect-error - Error | ValidationError is not assignable to ValidationError
+          const justValidationError: ValidationError = awaited.error;
+          assert.ok(justValidationError); // Use the variable to avoid unused variable error
+        },
+      );
+
+      await t.test(
+        "AsyncResult.or_else() maintains same type behavior",
+        async () => {
+          const asyncErrorResult = result.try_async<string>(() =>
+            Promise.reject(new Error("async error")),
+          );
+          const transformed = asyncErrorResult.or_else(
+            orElseFunctions.okNewType,
+          );
+          const awaited = await transformed;
+
+          assert.ok(awaited.is_ok());
+          const unionValue: string | number = awaited.value;
+          assert.ok(unionValue);
+
+          // @ts-expect-error - string | number is not assignable to number
+          const justNumber: number = awaited.value;
+          assert.ok(justNumber); // Use the variable to avoid unused variable error
+        },
+      );
+    });
+
+    await t.test("Type narrowing with union types", async (t) => {
+      await t.test("is_ok() correctly narrows union result types", () => {
+        const transformed = errorResult.or_else(orElseFunctions.okNewType);
+        // Type is Result<string | number, Error>
+
+        assert.ok(transformed.is_ok());
+        const unionValue: string | number = transformed.value;
+        assert.ok(unionValue);
+
+        // @ts-expect-error - string | number is not assignable to string
+        const justString: string = transformed.value;
+        assert.ok(justString); // Use the variable to avoid unused variable error
+
+        // @ts-expect-error - string | number is not assignable to number
+        const justNumber: number = transformed.value;
+        assert.ok(justNumber); // Use the variable to avoid unused variable error
+      });
+
+      await t.test("is_error() correctly narrows union error types", () => {
+        const transformed = okResult.and_then(andThenFunctions.errNewType);
+        // Type should be Result<string, Error | ValidationError>
+
+        assert.ok(transformed.is_error());
+        const unionError: Error | ValidationError = transformed.error;
+        assert.ok(unionError);
+
+        // @ts-expect-error - Error | ValidationError is not assignable to ValidationError
+        const justValidationError: ValidationError = transformed.error;
+        assert.ok(justValidationError); // Use the variable to avoid unused variable error
+      });
     });
   });
 
