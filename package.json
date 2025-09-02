@@ -36,8 +36,8 @@
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "security:audit": "npm audit --audit-level=moderate",
     "security:fix": "npm audit fix",
-    "docs:build": "typedoc src/index.ts",
-    "docs:serve": "typedoc src/index.ts --watch",
+    "docs:build": "typedoc --options .config/typedoc.config.js",
+    "docs:serve": "typedoc --options .config/typedoc.config.js --watch",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
     "prepare": "husky .config/husky"

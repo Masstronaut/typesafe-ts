@@ -25,10 +25,8 @@ const TypesafeTSPlugin = {
     "enforce-result-usage": enforceResultUsage,
   },
 };
-
 export default tseslint.config(
   tseslint.configs.recommendedTypeChecked,
-
   // Configuration for source files
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
@@ -95,7 +93,7 @@ export default tseslint.config(
       "**/tests/**/*.ts",
     ],
     rules: {
-      // More lenient rules for test files
+      // More lenient rules for test files as they need non-compliant test cases
       "typesafe-ts/enforce-optional-usage": "warn",
       "typesafe-ts/enforce-result-usage": [
         "warn",
