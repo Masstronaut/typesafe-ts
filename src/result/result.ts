@@ -241,9 +241,9 @@ interface IResult<ResultType, ErrorType extends Error> {
    * }
    * ```
    */
-  and_then<NewResultType>(
-    fn: (value: ResultType) => Result<NewResultType, ErrorType>,
-  ): Result<NewResultType, ErrorType>;
+  and_then<NewResultType, NewErrorType extends Error = ErrorType>(
+    fn: (value: ResultType) => Result<NewResultType, NewErrorType>,
+  ): Result<NewResultType, NewErrorType | ErrorType>;
 
   /**
    * Provides a fallback Result if this Result is Error.
@@ -272,9 +272,9 @@ interface IResult<ResultType, ErrorType extends Error> {
    * }
    * ```
    */
-  or_else<NewErrorType extends Error>(
-    fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
-  ): Result<ResultType, NewErrorType>;
+  or_else<NewResultType = ResultType, NewErrorType extends Error = ErrorType>(
+    fn: (error: ErrorType) => Result<NewResultType, NewErrorType>,
+  ): Result<ResultType | NewResultType, NewErrorType>;
 
   /**
    * Returns a generator that yields the contained value if this Result is Ok.
@@ -442,18 +442,18 @@ class ResultImpl<ResultType, ErrorType extends Error>
     return on_error(this.error as ErrorType);
   }
 
-  and_then<NewResultType>(
-    fn: (value: ResultType) => Result<NewResultType, ErrorType>,
-  ): Result<NewResultType, ErrorType> {
+  and_then<NewResultType, NewErrorType extends Error = ErrorType>(
+    fn: (value: ResultType) => Result<NewResultType, NewErrorType>,
+  ): Result<NewResultType, ErrorType | NewErrorType> {
     if (this.is_ok()) {
       return fn(this.value);
     }
-    return this as unknown as Result<NewResultType, ErrorType>;
+    return this as unknown as Result<NewResultType, NewErrorType | ErrorType>;
   }
 
-  or_else<NewErrorType extends Error>(
-    fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
-  ): Result<ResultType, NewErrorType> {
+  or_else<NewResultType = ResultType, NewErrorType extends Error = ErrorType>(
+    fn: (error: ErrorType) => Result<NewResultType, NewErrorType>,
+  ): Result<NewResultType | ResultType, NewErrorType> {
     if (this.is_error()) {
       return fn(this.error);
     }
@@ -646,9 +646,9 @@ class AsyncResult<ResultType, ErrorType extends Error>
    * @param fn - Function that takes the Ok value and returns a new Result
    * @returns A new AsyncResult with the result returned by fn if Ok, otherwise the original error
    */
-  and_then<NewResultType>(
-    fn: (value: ResultType) => Result<NewResultType, ErrorType>,
-  ): AsyncResult<NewResultType, ErrorType> {
+  and_then<NewResultType = ResultType, NewErrorType extends Error = ErrorType>(
+    fn: (value: ResultType) => Result<NewResultType, NewErrorType>,
+  ): AsyncResult<NewResultType, ErrorType | NewErrorType> {
     const newPromise = this.promise.then((result) => result.and_then(fn));
     return new AsyncResult(newPromise);
   }
@@ -661,9 +661,9 @@ class AsyncResult<ResultType, ErrorType extends Error>
    * @param fn - Function that takes the Error and returns a fallback Result
    * @returns A new AsyncResult with the fallback Result returned by fn if Error, otherwise the original Ok value
    */
-  or_else<NewErrorType extends Error>(
-    fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
-  ): AsyncResult<ResultType, NewErrorType> {
+  or_else<NewResultType = ResultType, NewErrorType extends Error = ErrorType>(
+    fn: (error: ErrorType) => Result<NewResultType, NewErrorType>,
+  ): AsyncResult<ResultType | NewResultType, NewErrorType> {
     const newPromise = this.promise.then((result) => result.or_else(fn));
     return new AsyncResult(newPromise);
   }
