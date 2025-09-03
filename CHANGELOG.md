@@ -1,3 +1,12 @@
+# [1.4.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.3.0...v1.4.0) (2025-09-03)
+
+
+### Features
+
+* add Assert utility for compile-time type assertions ([58efa7e](https://github.com/Masstronaut/typesafe-ts/commit/58efa7e42025377c3e59f9f51c3ad855a28269c3))
+* add Check utilities for type relationship testing ([5912b0c](https://github.com/Masstronaut/typesafe-ts/commit/5912b0c2fa196c36fd82f288af360f229e41c8b2))
+* enhance Result and_then/or_else type union handling ([48b9e11](https://github.com/Masstronaut/typesafe-ts/commit/48b9e11a44345d82663311a0352ee1e543eb4cd9))
+
 # [1.3.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.2.0...v1.3.0) (2025-08-15)
 
 
