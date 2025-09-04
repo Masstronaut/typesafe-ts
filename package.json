@@ -34,6 +34,10 @@
     "lint": "eslint \"src/**/*.ts\"",
     "lint:file": "eslint",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "format:changed": "biome format --write --changed",
+    "format:check:changed": "biome format --changed",
     "security:audit": "npm audit --audit-level=moderate",
     "security:fix": "npm audit fix",
     "docs:build": "typedoc --options .config/typedoc.config.js",
@@ -67,6 +71,7 @@
   "author": "Allan Deutsch",
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "^2.2.2",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@semantic-release/changelog": "^6.0.3",
@@ -90,6 +95,7 @@
   },
   "lint-staged": {
     "*.ts": [
+      "biome format --write",
       "eslint",
       "bash -c 'npm run typecheck'"
     ]
