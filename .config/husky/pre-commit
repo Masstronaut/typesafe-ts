@@ -1,1 +1,2 @@
+npx biome format --staged --write
 npx lint-staged

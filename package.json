@@ -95,7 +95,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "biome format --write",
+      "biome format --staged --write",
       "eslint",
       "bash -c 'npm run typecheck'"
     ]
