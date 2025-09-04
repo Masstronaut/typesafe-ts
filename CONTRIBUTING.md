@@ -27,6 +27,10 @@ Thank you for your interest in contributing to typesafe-ts! This document provid
 
 - `npm run test` - Run tests with coverage
 - `npm run typecheck` - Run TypeScript type checking
+- `npm run format` - Format all files with Biome
+- `npm run format:check` - Check if files are properly formatted
+- `npm run format:changed` - Format only changed files
+- `npm run format:check:changed` - Check formatting for only changed files
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues automatically
 - `npm run build` - Build the project
@@ -40,6 +44,7 @@ All contributions must meet these standards:
 
 - **100% test coverage** - All code must have comprehensive tests
 - **TypeScript strict mode** - All code must pass strict TypeScript checking
+- **Code formatting** - All code must be formatted with Biome (enforced by pre-commit hooks and CI)
 - **Eraseable syntax only** - Only _erasable_ TypeScript syntax is allowed.
 - **ESLint compliance** - All code must pass linting with 0 warnings or errors
 - **Zero dependencies** - Core utilities must not introduce external dependencies. Supporting code (tests, dev tools, etc.) should prefer to avoid dependencies where possible.
@@ -47,10 +52,20 @@ All contributions must meet these standards:
 ### Code Style
 
 - Use strict TypeScript for all code
+- Code is automatically formatted with Biome
 - Follow existing code patterns and conventions
 - Use JSDoc for all public interfaces
 - No comments in implementation code (code should be self-documenting)
 - Use monadic patterns where appropriate
+
+### Formatting
+
+This project uses [Biome](https://biomejs.dev/) for consistent code formatting:
+
+- **Automatic formatting**: Pre-commit hooks automatically format staged files
+- **Manual formatting**: Run `npm run format` to format all files
+- **CI validation**: Pull requests are validated for proper formatting
+- **Configuration**: See `biome.jsonc` for current formatting rules
 
 ## Commit Message Format
 
@@ -116,12 +131,15 @@ test(optional): add comprehensive tests for filter method
 3. **Verify your changes**
 
    ```bash
-   npm run test
-   npm run typecheck
-   npm run lint
-   npm run build
-   npm run docs:build
+   npm run format:check  # Check code formatting
+   npm run test          # Run tests with coverage
+   npm run typecheck     # TypeScript type checking
+   npm run lint          # ESLint checks
+   npm run build         # Build the project
+   npm run docs:build    # Generate documentation
    ```
+
+   **Note**: Pre-commit hooks will automatically format your code, but you can manually check formatting with `npm run format:check`.
 
 4. **Commit using conventional commits**
 
