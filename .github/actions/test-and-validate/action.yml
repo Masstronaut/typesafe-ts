@@ -20,6 +20,10 @@ runs:
       run: npm ci
       shell: bash
       
+    - name: Check code formatting
+      run: npm run format:check
+      shell: bash
+      
     - name: Run linting
       run: npm run lint
       shell: bash
