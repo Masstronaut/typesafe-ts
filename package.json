@@ -31,6 +31,8 @@
     "clean": "rm -rf dist",
     "test": "node --test --experimental-test-coverage",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:file": "eslint",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
@@ -83,6 +85,7 @@
     "husky": "^9.1.7",
     "jiti": "^2.4.2",
     "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
     "semantic-release": "^24.2.6",
     "typedoc": "^0.28.7",
     "typescript": "^5.8.3",
@@ -90,6 +93,7 @@
   },
   "lint-staged": {
     "*.ts": [
+      "prettier --write",
       "eslint",
       "bash -c 'npm run typecheck'"
     ]
