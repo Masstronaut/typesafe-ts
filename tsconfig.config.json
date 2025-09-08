@@ -5,6 +5,6 @@
     "checkJs": true,
     "allowJs": true
   },
-  "include": ["*.ts", ".config/*.js"],
+  "include": ["*.ts", ".config/*.js", ".config/*.ts"],
   "exclude": ["dist", "node_modules", "src"]
 }
