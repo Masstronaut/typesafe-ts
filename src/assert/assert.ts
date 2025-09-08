@@ -81,22 +81,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  * @see {@link Check.IsUnknown} - Test if a type is `unknown`
  */
 export function Assert<
-  T extends
-  | true
-  | {
-    "Assertion Error": AssertMessage;
-    "You provided": T;
-    Hint: "Assert works best with conditional types that resolves to true or false, such as Check.Equal<A, B>, Check.IsNever<T>, etc.";
-  },
-  AssertMessage extends string = "",
+    T extends
+        | true
+        | {
+              "Assertion Error": AssertMessage;
+              "You provided": T;
+              Hint: T extends false
+                  ? "The asserted condition is false."
+                  : "Assert works best with conditional types that resolves to true or false, such as Check.Equal<A, B>, Check.IsNever<T>, etc.";
+          },
+    AssertMessage extends string = "",
 >(): T extends true ? void : AssertionError<T, AssertMessage> {
-  return "" as unknown as T extends true
-    ? void
-    : AssertionError<T, AssertMessage>;
+    return "" as unknown as T extends true
+        ? void
+        : AssertionError<T, AssertMessage>;
 }
 
 type AssertionError<T, Message extends string> = {
-  "Assertion Error": Message;
-  "Check Result": T;
-  Hint: "Use Check.Equal<A, B>, Check.True<T>, Check.False<T>, or Check.Extends<Sub, Super>";
+    "Assertion Error": Message;
+    "Check Result": T;
+    Hint: "Use Check.Equal<A, B>, Check.True<T>, Check.False<T>, or Check.Extends<Sub, Super>";
 };

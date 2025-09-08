@@ -20,88 +20,88 @@ import { enforceResultUsage } from "./src/result/lint.ts";
  */
 // Define the custom plugin once
 const TypesafeTSPlugin = {
-  rules: {
-    "enforce-optional-usage": enforceOptionalUsage,
-    "enforce-result-usage": enforceResultUsage,
-  },
+    rules: {
+        "enforce-optional-usage": enforceOptionalUsage,
+        "enforce-result-usage": enforceResultUsage,
+    },
 };
 export default tseslint.config(
-  tseslint.configs.recommendedTypeChecked,
-  // Configuration for source files
-  {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
-    languageOptions: {
-      parserOptions: {
-        ecmaVersion: 2020,
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-        sourceType: "module",
-      },
-    },
-    plugins: {
-      "typesafe-ts": TypesafeTSPlugin,
-    },
-    rules: {
-      // Disallow explicit any types
-      "@typescript-eslint/no-explicit-any": "error",
-
-      // Enforce Optional usage instead of nullable unions
-      "typesafe-ts/enforce-optional-usage": [
-        "error",
-        {
-          allowExceptions: [], // Add function names to exclude
-          autoFix: true,
+    tseslint.configs.recommendedTypeChecked,
+    // Configuration for source files
+    {
+        files: ["src/**/*.ts", "src/**/*.tsx"],
+        languageOptions: {
+            parserOptions: {
+                ecmaVersion: 2020,
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+                sourceType: "module",
+            },
         },
-      ],
-
-      // Enforce Result usage instead of throw/try-catch
-      "typesafe-ts/enforce-result-usage": [
-        "error",
-        {
-          allowExceptions: [], // Add function names to exclude
-          allowTestFiles: true, // Allow throw/try-catch in test files
-          autoFix: true,
+        plugins: {
+            "typesafe-ts": TypesafeTSPlugin,
         },
-      ],
-    },
-  },
+        rules: {
+            // Disallow explicit any types
+            "@typescript-eslint/no-explicit-any": "error",
 
-  // Configuration for root config files and .config directory
-  {
-    files: ["*.ts", ".config/**/*.ts", ".config/**/*.js"],
-    languageOptions: {
-      parserOptions: {
-        ecmaVersion: 2020,
-        project: "./tsconfig.config.json",
-        tsconfigRootDir: import.meta.dirname,
-        sourceType: "module",
-      },
-    },
-    rules: {
-      // Disable custom rules for config files
-      "typesafe-ts/enforce-optional-usage": "off",
-      "typesafe-ts/enforce-result-usage": "off",
-    },
-  },
+            // Enforce Optional usage instead of nullable unions
+            "typesafe-ts/enforce-optional-usage": [
+                "error",
+                {
+                    allowExceptions: [], // Add function names to exclude
+                    autoFix: true,
+                },
+            ],
 
-  // Configuration for test files with more relaxed rules
-  {
-    files: [
-      "**/*.test.ts",
-      "**/*.spec.ts",
-      "**/test/**/*.ts",
-      "**/tests/**/*.ts",
-    ],
-    rules: {
-      // More lenient rules for test files as they need non-compliant test cases
-      "typesafe-ts/enforce-optional-usage": "warn",
-      "typesafe-ts/enforce-result-usage": [
-        "warn",
-        {
-          allowTestFiles: true,
-          autoFix: false, // Don't auto-fix in test files
+            // Enforce Result usage instead of throw/try-catch
+            "typesafe-ts/enforce-result-usage": [
+                "error",
+                {
+                    allowExceptions: [], // Add function names to exclude
+                    allowTestFiles: true, // Allow throw/try-catch in test files
+                    autoFix: true,
+                },
+            ],
         },
-      ],
     },
-  },
+
+    // Configuration for root config files and .config directory
+    {
+        files: ["*.ts", ".config/**/*.ts", ".config/**/*.js"],
+        languageOptions: {
+            parserOptions: {
+                ecmaVersion: 2020,
+                project: "./tsconfig.config.json",
+                tsconfigRootDir: import.meta.dirname,
+                sourceType: "module",
+            },
+        },
+        rules: {
+            // Disable custom rules for config files
+            "typesafe-ts/enforce-optional-usage": "off",
+            "typesafe-ts/enforce-result-usage": "off",
+        },
+    },
+
+    // Configuration for test files with more relaxed rules
+    {
+        files: [
+            "**/*.test.ts",
+            "**/*.spec.ts",
+            "**/test/**/*.ts",
+            "**/tests/**/*.ts",
+        ],
+        rules: {
+            // More lenient rules for test files as they need non-compliant test cases
+            "typesafe-ts/enforce-optional-usage": "warn",
+            "typesafe-ts/enforce-result-usage": [
+                "warn",
+                {
+                    allowTestFiles: true,
+                    autoFix: false, // Don't auto-fix in test files
+                },
+            ],
+        },
+    }
 );

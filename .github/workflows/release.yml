@@ -1,37 +1,37 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+    push:
+        branches: [main]
+    workflow_dispatch:
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  actions: write
+    contents: write
+    issues: write
+    pull-requests: write
+    actions: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }}
-          persist-credentials: false
-          
-      - name: Test and validate
-        uses: ./.github/actions/test-and-validate
-        
-      - name: Build
-        uses: ./.github/actions/build
-          
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+    release:
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.RELEASE_TOKEN }}
+                  persist-credentials: false
+
+            - name: Test and validate
+              uses: ./.github/actions/test-and-validate
+
+            - name: Build
+              uses: ./.github/actions/build
+
+            - name: Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: npx semantic-release

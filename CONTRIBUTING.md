@@ -6,22 +6,22 @@ Thank you for your interest in contributing to typesafe-ts! This document provid
 
 1. **Fork and clone the repository**
 
-   ```bash
-   git clone https://github.com/masstronaut/typesafe-ts.git
-   cd typesafe-ts
-   ```
+    ```bash
+    git clone https://github.com/masstronaut/typesafe-ts.git
+    cd typesafe-ts
+    ```
 
 2. **Install dependencies**
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 3. **Run tests to ensure everything works**. Note that node 23.6 is required for NodeJS native TS support, which is required for the test runner.
-   ```bash
-   npm run test
-   npm run typecheck
-   ```
+    ```bash
+    npm run test
+    npm run typecheck
+    ```
 
 ## Development Commands
 
@@ -103,36 +103,35 @@ test(optional): add comprehensive tests for filter method
 
 1. **Create a feature branch**
 
-   ```bash
-   git checkout -b feat/your-feature-name
-   ```
+    ```bash
+    git checkout -b feat/your-feature-name
+    ```
 
 2. **Make your changes**
-
-   - Write code following the standards above
-   - Add comprehensive tests
-   - Update documentation if needed
+    - Write code following the standards above
+    - Add comprehensive tests
+    - Update documentation if needed
 
 3. **Verify your changes**
 
-   ```bash
-   npm run test
-   npm run typecheck
-   npm run lint
-   npm run build
-   npm run docs:build
-   ```
+    ```bash
+    npm run test
+    npm run typecheck
+    npm run lint
+    npm run build
+    npm run docs:build
+    ```
 
 4. **Commit using conventional commits**
 
-   ```bash
-   git commit -m "feat(optional): add support for linting with biome"
-   ```
+    ```bash
+    git commit -m "feat(optional): add support for linting with biome"
+    ```
 
 5. **Push and create a Pull Request**
-   ```bash
-   git push origin feat/your-feature-name
-   ```
+    ```bash
+    git push origin feat/your-feature-name
+    ```
 
 ## Testing Guidelines
 
@@ -148,22 +147,21 @@ When adding a new utility:
 
 1. **Create directory structure**
 
-   ```
-   src/new-utility/
-   ├── index.ts            # Main implementation
-   ├── new-utility.ts      # Implementation file
-   ├── new-utility.test.ts # Test suite
-   └── readme.md           # Documentation
-   ```
+    ```
+    src/new-utility/
+    ├── index.ts            # Main implementation
+    ├── new-utility.ts      # Implementation file
+    ├── new-utility.test.ts # Test suite
+    └── readme.md           # Documentation
+    ```
 
 2. **Follow existing patterns**
-
-   - License header at the top
-   - Interface definition
-   - Implementation class (frozen)
-   - Factory namespace
-   - Comprehensive JSDoc
-   - If there are design decisions you are unsure about, open an issue or update an existing one.
+    - License header at the top
+    - Interface definition
+    - Implementation class (frozen)
+    - Factory namespace
+    - Comprehensive JSDoc
+    - If there are design decisions you are unsure about, open an issue or update an existing one.
 
 3. **Update package.json exports**
    Add appropriate export paths for the new utility
