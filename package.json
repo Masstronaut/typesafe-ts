@@ -1,104 +1,104 @@
 {
-  "name": "typesafe-ts",
-  "version": "1.4.0",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    "name": "typesafe-ts",
+    "version": "1.4.0",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./optional": {
+            "types": "./dist/optional/index.d.ts",
+            "default": "./dist/optional/index.js"
+        },
+        "./optional/lint": {
+            "types": "./dist/optional/lint.d.ts",
+            "default": "./dist/optional/lint.js"
+        },
+        "./result": {
+            "types": "./dist/result/index.d.ts",
+            "default": "./dist/result/index.js"
+        },
+        "./result/lint": {
+            "types": "./dist/result/lint.d.ts",
+            "default": "./dist/result/lint.js"
+        }
     },
-    "./optional": {
-      "types": "./dist/optional/index.d.ts",
-      "default": "./dist/optional/index.js"
+    "scripts": {
+        "build": "tsc --project tsconfig.build.json",
+        "clean": "rm -rf dist",
+        "test": "node --test --experimental-test-coverage",
+        "typecheck": "tsc --noEmit",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "lint": "eslint \"src/**/*.ts\"",
+        "lint:file": "eslint",
+        "lint:fix": "eslint \"src/**/*.ts\" --fix",
+        "security:audit": "npm audit --audit-level=moderate",
+        "security:fix": "npm audit fix",
+        "docs:build": "typedoc --options .config/typedoc.config.js",
+        "docs:serve": "typedoc --options .config/typedoc.config.js --watch",
+        "release": "semantic-release",
+        "release:dry-run": "semantic-release --dry-run",
+        "prepare": "husky .config/husky"
     },
-    "./optional/lint": {
-      "types": "./dist/optional/lint.d.ts",
-      "default": "./dist/optional/lint.js"
+    "description": "TypeScript utilities for type-safe error handling and optional values",
+    "keywords": [
+        "typescript",
+        "monads",
+        "optional",
+        "result",
+        "error-handling",
+        "type-safe"
+    ],
+    "homepage": "https://github.com/Masstronaut/typesafe-ts#readme",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Masstronaut/typesafe-ts.git"
     },
-    "./result": {
-      "types": "./dist/result/index.d.ts",
-      "default": "./dist/result/index.js"
+    "bugs": {
+        "url": "https://github.com/Masstronaut/typesafe-ts/issues"
     },
-    "./result/lint": {
-      "types": "./dist/result/lint.d.ts",
-      "default": "./dist/result/lint.js"
+    "files": [
+        "dist/",
+        "LICENSE.txt",
+        "readme.md"
+    ],
+    "author": "Allan Deutsch",
+    "license": "MIT",
+    "devDependencies": {
+        "@commitlint/cli": "^19.8.1",
+        "@commitlint/config-conventional": "^19.8.1",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
+        "@semantic-release/github": "^11.0.3",
+        "@semantic-release/npm": "^12.0.2",
+        "@tsconfig/strictest": "^2.0.5",
+        "@types/node": "^22.15.29",
+        "@typescript-eslint/eslint-plugin": "^8.39.0",
+        "@typescript-eslint/parser": "^8.39.0",
+        "@typescript-eslint/rule-tester": "^8.39.0",
+        "@typescript-eslint/utils": "^8.39.0",
+        "eslint": "^9.17.0",
+        "husky": "^9.1.7",
+        "jiti": "^2.4.2",
+        "lint-staged": "^16.1.2",
+        "prettier": "^3.6.2",
+        "semantic-release": "^24.2.6",
+        "typedoc": "^0.28.7",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.36.0"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "prettier --write",
+            "eslint",
+            "bash -c 'npm run typecheck'"
+        ]
+    },
+    "peerDependencies": {
+        "@typescript-eslint/utils": "^8.39.0"
     }
-  },
-  "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "clean": "rm -rf dist",
-    "test": "node --test --experimental-test-coverage",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "eslint \"src/**/*.ts\"",
-    "lint:file": "eslint",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix",
-    "security:audit": "npm audit --audit-level=moderate",
-    "security:fix": "npm audit fix",
-    "docs:build": "typedoc --options .config/typedoc.config.js",
-    "docs:serve": "typedoc --options .config/typedoc.config.js --watch",
-    "release": "semantic-release",
-    "release:dry-run": "semantic-release --dry-run",
-    "prepare": "husky .config/husky"
-  },
-  "description": "TypeScript utilities for type-safe error handling and optional values",
-  "keywords": [
-    "typescript",
-    "monads",
-    "optional",
-    "result",
-    "error-handling",
-    "type-safe"
-  ],
-  "homepage": "https://github.com/Masstronaut/typesafe-ts#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Masstronaut/typesafe-ts.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Masstronaut/typesafe-ts/issues"
-  },
-  "files": [
-    "dist/",
-    "LICENSE.txt",
-    "readme.md"
-  ],
-  "author": "Allan Deutsch",
-  "license": "MIT",
-  "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^11.0.3",
-    "@semantic-release/npm": "^12.0.2",
-    "@tsconfig/strictest": "^2.0.5",
-    "@types/node": "^22.15.29",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
-    "@typescript-eslint/rule-tester": "^8.39.0",
-    "@typescript-eslint/utils": "^8.39.0",
-    "eslint": "^9.17.0",
-    "husky": "^9.1.7",
-    "jiti": "^2.4.2",
-    "lint-staged": "^16.1.2",
-    "prettier": "^3.6.2",
-    "semantic-release": "^24.2.6",
-    "typedoc": "^0.28.7",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.36.0"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "prettier --write",
-      "eslint",
-      "bash -c 'npm run typecheck'"
-    ]
-  },
-  "peerDependencies": {
-    "@typescript-eslint/utils": "^8.39.0"
-  }
 }

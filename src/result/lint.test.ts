@@ -13,187 +13,187 @@ import { RuleTester } from "@typescript-eslint/rule-tester";
 import { enforceResultUsage } from "./lint.ts";
 
 // Configure RuleTester for Node.js test environment
-RuleTester.afterAll = () => { };
+RuleTester.afterAll = () => {};
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.it = test;
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 RuleTester.describe = (name: string, fn: () => void) => test(name, fn);
 
 const ruleTester = new RuleTester({
-  languageOptions: {
-    parserOptions: {
-      ecmaVersion: 2020,
-      sourceType: "module",
+    languageOptions: {
+        parserOptions: {
+            ecmaVersion: 2020,
+            sourceType: "module",
+        },
     },
-  },
 });
 
 ruleTester.run("enforce-result-usage", enforceResultUsage, {
-  valid: [
-    {
-      name: "Functions returning Result are valid",
-      code: `function parseJSON(text: string): Result<any, Error> {
+    valid: [
+        {
+            name: "Functions returning Result are valid",
+            code: `function parseJSON(text: string): Result<any, Error> {
         return result.try(() => JSON.parse(text));
       }`,
-    },
-    {
-      name: "Using result.try() for throwing calls is valid",
-      code: `const parsed = result.try(() => JSON.parse(jsonString));`,
-    },
-    {
-      name: "Using result.try() with block statement is valid",
-      code: `const data = result.try(() => {
+        },
+        {
+            name: "Using result.try() for throwing calls is valid",
+            code: `const parsed = result.try(() => JSON.parse(jsonString));`,
+        },
+        {
+            name: "Using result.try() with block statement is valid",
+            code: `const data = result.try(() => {
         const parsed = JSON.parse(input);
         return parsed.value;
       });`,
-    },
-    {
-      name: "Using result.try_async() for async operations is valid",
-      code: `const data = await result.try_async(() => fetch('/api/data'));`,
-    },
-    {
-      name: "Using result.error() instead of throw is valid",
-      code: `function validateInput(input: string): Result<string, Error> {
+        },
+        {
+            name: "Using result.try_async() for async operations is valid",
+            code: `const data = await result.try_async(() => fetch('/api/data'));`,
+        },
+        {
+            name: "Using result.error() instead of throw is valid",
+            code: `function validateInput(input: string): Result<string, Error> {
         if (!input) {
           return result.error(new Error("Input is required"));
         }
         return result.ok(input);
       }`,
-    },
-    {
-      name: "Test files are allowed to use throw/try-catch by default",
-      code: `function testHelper() {
+        },
+        {
+            name: "Test files are allowed to use throw/try-catch by default",
+            code: `function testHelper() {
         throw new Error("Test error");
       }`,
-      filename: "test.spec.ts",
-    },
-    {
-      name: "Test files allow try-catch by default",
-      code: `try {
+            filename: "test.spec.ts",
+        },
+        {
+            name: "Test files allow try-catch by default",
+            code: `try {
         doSomething();
       } catch (error) {
         console.log(error);
       }`,
-      filename: "src/component.test.ts",
-    },
-    {
-      name: "Exception functions are allowed",
-      code: `function allowedFunction() {
+            filename: "src/component.test.ts",
+        },
+        {
+            name: "Exception functions are allowed",
+            code: `function allowedFunction() {
         throw new Error("This is allowed");
       }`,
-      options: [{ allowExceptions: ["allowedFunction"] }],
-    },
-    {
-      name: "Pattern exceptions are allowed",
-      code: `function debugHelper() {
+            options: [{ allowExceptions: ["allowedFunction"] }],
+        },
+        {
+            name: "Pattern exceptions are allowed",
+            code: `function debugHelper() {
         throw new Error("Debug error");
       }`,
-      options: [{ allowExceptions: ["debug*"] }],
-    },
-    {
-      name: "Already wrapped calls are valid",
-      code: `const parsed = result.try(() => {
+            options: [{ allowExceptions: ["debug*"] }],
+        },
+        {
+            name: "Already wrapped calls are valid",
+            code: `const parsed = result.try(() => {
         return JSON.parse(data);
       });`,
-    },
-    {
-      name: "Complex call expressions don't trigger rule",
-      code: `const result = obj[methodName]();`,
-    },
-    {
-      name: "Non-throwing member expressions are valid",
-      code: `const max = Math.max(1, 2, 3);`,
-    },
-    {
-      name: "Function expressions don't trigger rule",
-      code: `const result = (function(){ return 42; })();`,
-    },
-    {
-      name: "Member expressions not in hardcoded list are not detected (limitation)",
-      code: `const trimmed = String.prototype.trim.call("  test  ");`,
-    },
-    {
-      name: "Call expression outside try block should exercise isInsideTryBlock false path",
-      code: `function test() { const data = Math.random(); }`,
-    },
-    {
-      name: "Throwing member APIs not in hardcoded list are missed (known limitation)",
-      code: `const regex = new RegExp("invalid[");`, // This throws but won't be caught
-    },
-    {
-      name: "Instance method calls are not detected (limitation)",
-      code: `weakMap.set(primitive, value);`, // Instance methods not detected
-    },
-    {
-      name: "Exception functions without wildcards are allowed",
-      code: `function exactName() {
+        },
+        {
+            name: "Complex call expressions don't trigger rule",
+            code: `const result = obj[methodName]();`,
+        },
+        {
+            name: "Non-throwing member expressions are valid",
+            code: `const max = Math.max(1, 2, 3);`,
+        },
+        {
+            name: "Function expressions don't trigger rule",
+            code: `const result = (function(){ return 42; })();`,
+        },
+        {
+            name: "Member expressions not in hardcoded list are not detected (limitation)",
+            code: `const trimmed = String.prototype.trim.call("  test  ");`,
+        },
+        {
+            name: "Call expression outside try block should exercise isInsideTryBlock false path",
+            code: `function test() { const data = Math.random(); }`,
+        },
+        {
+            name: "Throwing member APIs not in hardcoded list are missed (known limitation)",
+            code: `const regex = new RegExp("invalid[");`, // This throws but won't be caught
+        },
+        {
+            name: "Instance method calls are not detected (limitation)",
+            code: `weakMap.set(primitive, value);`, // Instance methods not detected
+        },
+        {
+            name: "Exception functions without wildcards are allowed",
+            code: `function exactName() {
         throw new Error("Exact match exception");
       }`,
-      options: [{ allowExceptions: ["exactName"] }],
-    },
-    {
-      name: "Arrow functions returning null can be used inside result.try()",
-      code: `const nullResult = result.try(() => null);`,
-    },
-  ],
+            options: [{ allowExceptions: ["exactName"] }],
+        },
+        {
+            name: "Arrow functions returning null can be used inside result.try()",
+            code: `const nullResult = result.try(() => null);`,
+        },
+    ],
 
-  invalid: [
-    {
-      name: "Throw statements should be flagged",
-      code: `function validateInput(input: string) {
+    invalid: [
+        {
+            name: "Throw statements should be flagged",
+            code: `function validateInput(input: string) {
         if (!input) {
           throw new Error("Input is required");
         }
         return input;
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function validateInput(input: string) {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function validateInput(input: string) {
         if (!input) {
           return result.error(new Error("Input is required"));
         }
         return input;
       }`,
-    },
+        },
 
-    {
-      name: "Throw with identifier",
-      code: `function processData() {
+        {
+            name: "Throw with identifier",
+            code: `function processData() {
         const error = new Error("Processing failed");
         throw error;
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function processData() {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function processData() {
         const error = new Error("Processing failed");
         return result.error(error);
       }`,
-    },
+        },
 
-    {
-      name: "Throw with string (should wrap in Error)",
-      code: `function handleError() {
+        {
+            name: "Throw with string (should wrap in Error)",
+            code: `function handleError() {
         throw "Something went wrong";
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function handleError() {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function handleError() {
         return result.error(new Error("Something went wrong"));
       }`,
-    },
+        },
 
-    {
-      name: "Try/catch blocks should be flagged",
-      code: `function parseData(input: string) {
+        {
+            name: "Try/catch blocks should be flagged",
+            code: `function parseData(input: string) {
         try {
           const data = JSON.parse(input);
           return data.value;
@@ -202,22 +202,22 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
           return null;
         }
       }`,
-      errors: [
-        {
-          messageId: "noTryCatchBlock",
-        },
-      ],
-      output: `function parseData(input: string) {
+            errors: [
+                {
+                    messageId: "noTryCatchBlock",
+                },
+            ],
+            output: `function parseData(input: string) {
         const result = result.try(() => {
           const data = JSON.parse(input);
           return data.value;
         });
       }`,
-    },
+        },
 
-    {
-      name: "Try/catch with async operations",
-      code: `async function fetchData() {
+        {
+            name: "Try/catch with async operations",
+            code: `async function fetchData() {
         try {
           const response = await fetch('/api/data');
           return await response.json();
@@ -225,152 +225,152 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
           return null;
         }
       }`,
-      errors: [
-        {
-          messageId: "noTryCatchBlock",
-        },
-      ],
-      output: `async function fetchData() {
+            errors: [
+                {
+                    messageId: "noTryCatchBlock",
+                },
+            ],
+            output: `async function fetchData() {
         const result = await result.try_async(async () => {
           const response = await fetch('/api/data');
           return await response.json();
         });
       }`,
-    },
-
-    {
-      name: "Direct JSON.parse call",
-      code: `const data = JSON.parse(jsonString);`,
-      errors: [
-        {
-          messageId: "useResultTry",
         },
-      ],
-      output: `const data = result.try(() => JSON.parse(jsonString));`,
-    },
 
-    {
-      name: "Direct parseInt call",
-      code: `const number = parseInt(userInput);`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct JSON.parse call",
+            code: `const data = JSON.parse(jsonString);`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const data = result.try(() => JSON.parse(jsonString));`,
         },
-      ],
-      output: `const number = result.try(() => parseInt(userInput));`,
-    },
 
-    {
-      name: "Direct atob call",
-      code: `const decoded = atob(encodedString);`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct parseInt call",
+            code: `const number = parseInt(userInput);`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const number = result.try(() => parseInt(userInput));`,
         },
-      ],
-      output: `const decoded = result.try(() => atob(encodedString));`,
-    },
 
-    {
-      name: "Direct fetch call (async)",
-      code: `const response = fetch('/api/data');`,
-      errors: [
         {
-          messageId: "useResultTryAsync",
+            name: "Direct atob call",
+            code: `const decoded = atob(encodedString);`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const decoded = result.try(() => atob(encodedString));`,
         },
-      ],
-      output: `const response = result.try_async(() => fetch('/api/data'));`,
-    },
 
-    {
-      name: "Direct Proxy.revocable call",
-      code: `const proxy = Proxy.revocable({}, {});`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct fetch call (async)",
+            code: `const response = fetch('/api/data');`,
+            errors: [
+                {
+                    messageId: "useResultTryAsync",
+                },
+            ],
+            output: `const response = result.try_async(() => fetch('/api/data'));`,
         },
-      ],
-      output: `const proxy = result.try(() => Proxy.revocable({}, {}));`,
-    },
 
-    {
-      name: "Direct Array.from call",
-      code: `const arr = Array.from({ length: -1 });`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct Proxy.revocable call",
+            code: `const proxy = Proxy.revocable({}, {});`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const proxy = result.try(() => Proxy.revocable({}, {}));`,
         },
-      ],
-      output: `const arr = result.try(() => Array.from({ length: -1 }));`,
-    },
 
-    {
-      name: "Direct Object.defineProperty call",
-      code: `Object.defineProperty(obj, 'prop', { value: 42 });`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct Array.from call",
+            code: `const arr = Array.from({ length: -1 });`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const arr = result.try(() => Array.from({ length: -1 }));`,
         },
-      ],
-      output: `result.try(() => Object.defineProperty(obj, 'prop', { value: 42 }));`,
-    },
 
-    {
-      name: "Direct String.fromCharCode call",
-      code: `const char = String.fromCharCode(0x110000);`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct Object.defineProperty call",
+            code: `Object.defineProperty(obj, 'prop', { value: 42 });`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `result.try(() => Object.defineProperty(obj, 'prop', { value: 42 }));`,
         },
-      ],
-      output: `const char = result.try(() => String.fromCharCode(0x110000));`,
-    },
 
-    {
-      name: "Direct Symbol.keyFor call",
-      code: `const key = Symbol.keyFor(notASymbol);`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct String.fromCharCode call",
+            code: `const char = String.fromCharCode(0x110000);`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const char = result.try(() => String.fromCharCode(0x110000));`,
         },
-      ],
-      output: `const key = result.try(() => Symbol.keyFor(notASymbol));`,
-    },
 
-    {
-      name: "Direct Reflect.get call",
-      code: `const value = Reflect.get(target, 'prop');`,
-      errors: [
         {
-          messageId: "useResultTry",
+            name: "Direct Symbol.keyFor call",
+            code: `const key = Symbol.keyFor(notASymbol);`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const key = result.try(() => Symbol.keyFor(notASymbol));`,
         },
-      ],
-      output: `const value = result.try(() => Reflect.get(target, 'prop'));`,
-    },
 
-    {
-      name: "Multiple throwing calls in one statement",
-      code: `const result = {
+        {
+            name: "Direct Reflect.get call",
+            code: `const value = Reflect.get(target, 'prop');`,
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const value = result.try(() => Reflect.get(target, 'prop'));`,
+        },
+
+        {
+            name: "Multiple throwing calls in one statement",
+            code: `const result = {
         parsed: JSON.parse(input1),
         number: parseInt(input2)
       };`,
-      errors: [
-        {
-          messageId: "useResultTry",
-        },
-        {
-          messageId: "useResultTry",
-        },
-      ],
-      output: `const result = {
+            errors: [
+                {
+                    messageId: "useResultTry",
+                },
+                {
+                    messageId: "useResultTry",
+                },
+            ],
+            output: `const result = {
         parsed: result.try(() => JSON.parse(input1)),
         number: result.try(() => parseInt(input2))
       };`,
-    },
+        },
 
-    {
-      name: "Nested try/catch (disable auto-fix due to complex overlapping fixes)",
-      code: `function complexOperation() {
+        {
+            name: "Nested try/catch (disable auto-fix due to complex overlapping fixes)",
+            code: `function complexOperation() {
         try {
           const step1 = JSON.parse(input);
           try {
@@ -383,23 +383,23 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
           return null;
         }
       }`,
-      options: [{ autoFix: false }],
-      errors: [
-        {
-          messageId: "noTryCatchBlock",
+            options: [{ autoFix: false }],
+            errors: [
+                {
+                    messageId: "noTryCatchBlock",
+                },
+                {
+                    messageId: "noTryCatchBlock",
+                },
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
         },
-        {
-          messageId: "noTryCatchBlock",
-        },
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-    },
 
-    {
-      name: "Method with throw",
-      code: `class DataProcessor {
+        {
+            name: "Method with throw",
+            code: `class DataProcessor {
         process(input: string) {
           if (!input) {
             throw new Error("Input required");
@@ -407,12 +407,12 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
           return input.toUpperCase();
         }
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `class DataProcessor {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `class DataProcessor {
         process(input: string) {
           if (!input) {
             return result.error(new Error("Input required"));
@@ -420,97 +420,97 @@ ruleTester.run("enforce-result-usage", enforceResultUsage, {
           return input.toUpperCase();
         }
       }`,
-    },
+        },
 
-    {
-      name: "Arrow function with throw",
-      code: `const validator = (input: string) => {
+        {
+            name: "Arrow function with throw",
+            code: `const validator = (input: string) => {
         if (!input) throw new Error("Invalid input");
         return input;
       };`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `const validator = (input: string) => {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `const validator = (input: string) => {
         if (!input) return result.error(new Error("Invalid input"));
         return input;
       };`,
-    },
+        },
 
-    {
-      name: "Test file with allowTestFiles: false",
-      code: `function testHelper() {
+        {
+            name: "Test file with allowTestFiles: false",
+            code: `function testHelper() {
         throw new Error("Test error");
       }`,
-      filename: "test.spec.ts",
-      options: [{ allowTestFiles: false }],
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function testHelper() {
+            filename: "test.spec.ts",
+            options: [{ allowTestFiles: false }],
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function testHelper() {
         return result.error(new Error("Test error"));
       }`,
-    },
+        },
 
-    {
-      name: "Throw with non-Error object should wrap in Error",
-      code: `function handleError() {
+        {
+            name: "Throw with non-Error object should wrap in Error",
+            code: `function handleError() {
         throw { message: "Custom error object" };
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function handleError() {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function handleError() {
         return result.error(new Error({ message: "Custom error object" }));
       }`,
-    },
+        },
 
-    {
-      name: "Throw with number should wrap in Error",
-      code: `function handleError() {
+        {
+            name: "Throw with number should wrap in Error",
+            code: `function handleError() {
         throw 404;
       }`,
-      errors: [
-        {
-          messageId: "noThrowStatement",
-        },
-      ],
-      output: `function handleError() {
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
+            output: `function handleError() {
         return result.error(new Error(404));
       }`,
-    },
-  ],
+        },
+    ],
 });
 
 // Test with disabled auto-fix
 ruleTester.run("enforce-result-usage (no auto-fix)", enforceResultUsage, {
-  valid: [],
-  invalid: [
-    {
-      name: "Throw statement with autoFix disabled",
-      code: `throw new Error("Test");`,
-      options: [{ autoFix: false }],
-      errors: [
+    valid: [],
+    invalid: [
         {
-          messageId: "noThrowStatement",
+            name: "Throw statement with autoFix disabled",
+            code: `throw new Error("Test");`,
+            options: [{ autoFix: false }],
+            errors: [
+                {
+                    messageId: "noThrowStatement",
+                },
+            ],
         },
-      ],
-    },
-    {
-      name: "Try/catch block with autoFix disabled",
-      code: `try { doSomething(); } catch (e) { console.log(e); }`,
-      options: [{ autoFix: false }],
-      errors: [
         {
-          messageId: "noTryCatchBlock",
+            name: "Try/catch block with autoFix disabled",
+            code: `try { doSomething(); } catch (e) { console.log(e); }`,
+            options: [{ autoFix: false }],
+            errors: [
+                {
+                    messageId: "noTryCatchBlock",
+                },
+            ],
         },
-      ],
-    },
-  ],
+    ],
 });

@@ -18,35 +18,35 @@ Here's an overview of the `Optional` interface:
 ```ts optional.ts
 // Interface definition that can be used for type annotations.
 export interface Optional<ValueType> {
-  // Check if the optional has a value. If it does, it will be widened to include a `value` property.
-  is_some(): this is OptionalWithValue<ValueType>;
+    // Check if the optional has a value. If it does, it will be widened to include a `value` property.
+    is_some(): this is OptionalWithValue<ValueType>;
 
-  // If the optional has a value, return it. Otherwise, return the provided default value.
-  value_or(value_if_empty: ValueType): ValueType;
+    // If the optional has a value, return it. Otherwise, return the provided default value.
+    value_or(value_if_empty: ValueType): ValueType;
 
-  // If the optional has a value, map it and return a new Optional with the mapped value.
-  // Otherwise, return an empty Optional.
-  map<NewValueType>(
-    mapper_fn: (value: ValueType) => NewValueType,
-  ): Optional<NewValueType>;
+    // If the optional has a value, map it and return a new Optional with the mapped value.
+    // Otherwise, return an empty Optional.
+    map<NewValueType>(
+        mapper_fn: (value: ValueType) => NewValueType
+    ): Optional<NewValueType>;
 
-  // If this Optional has a value, apply the function to it. Otherwise, return an empty Optional.
-  and_then<NewValueType>(
-    fn: (value: ValueType) => Optional<NewValueType>,
-  ): Optional<NewValueType>;
+    // If this Optional has a value, apply the function to it. Otherwise, return an empty Optional.
+    and_then<NewValueType>(
+        fn: (value: ValueType) => Optional<NewValueType>
+    ): Optional<NewValueType>;
 
-  // Provide an alternative value if this Optional is empty.
-  or_else(fn: () => Optional<ValueType>): Optional<ValueType>;
+    // Provide an alternative value if this Optional is empty.
+    or_else(fn: () => Optional<ValueType>): Optional<ValueType>;
 
-  // Iterator support - yields the value if present, nothing if empty.
-  [Symbol.iterator](): Generator<ValueType, void, unknown>;
+    // Iterator support - yields the value if present, nothing if empty.
+    [Symbol.iterator](): Generator<ValueType, void, unknown>;
 }
 
 export const optional = {
-  some, // constructs an `Optional` with a value
-  none, // constructs an `Optional` without a value
-  from_nullable, // creates an Optional from a nullable value
-  from, // (deprecated) executes a function and wraps result
+    some, // constructs an `Optional` with a value
+    none, // constructs an `Optional` without a value
+    from_nullable, // creates an Optional from a nullable value
+    from, // (deprecated) executes a function and wraps result
 };
 ```
 
@@ -134,19 +134,19 @@ The ESLint rule is included with the Optional utility. To use it in your project
 import { enforceOptionalUsage } from "./src/optional/eslint-rule.ts";
 
 export default [
-  {
-    files: ["**/*.ts", "**/*.tsx"],
-    plugins: {
-      optional: {
-        rules: {
-          "enforce-optional-usage": enforceOptionalUsage,
+    {
+        files: ["**/*.ts", "**/*.tsx"],
+        plugins: {
+            optional: {
+                rules: {
+                    "enforce-optional-usage": enforceOptionalUsage,
+                },
+            },
         },
-      },
+        rules: {
+            "optional/enforce-optional-usage": "error",
+        },
     },
-    rules: {
-      "optional/enforce-optional-usage": "error",
-    },
-  },
 ];
 ```
 
@@ -194,13 +194,13 @@ The rule identifies three types of violations and provides automatic fixes where
 ```ts
 // ❌ ESLint Error: Functions should return Optional<User> instead of User | null | undefined
 function findUser(id: string): User | null {
-  return users.find((u) => u.id === id) ?? null;
+    return users.find((u) => u.id === id) ?? null;
 }
 
 // ✅ Fixed: Use Optional<T> return type
 function findUser(id: string): Optional<User> {
-  const user = users.find((u) => u.id === id);
-  return user ? optional.some(user) : optional.none();
+    const user = users.find((u) => u.id === id);
+    return user ? optional.some(user) : optional.none();
 }
 ```
 
