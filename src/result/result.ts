@@ -761,10 +761,6 @@ class AsyncResult<ResultType, ErrorType extends Error>
         errorMapper: (error: unknown) => NewErrorType
     ): AsyncResult<NewResultType, ErrorType | NewErrorType>;
 
-    try_async<NewResultType>(
-        fn: (value: ResultType) => Promise<NewResultType>
-    ): AsyncResult<NewResultType, ErrorType | TryAsyncError>;
-
     try_async<NewResultType, NewErrorType extends Error = TryAsyncError>(
         fn: (value: ResultType) => Promise<NewResultType>,
         errorMapper?: (error: unknown) => NewErrorType
@@ -942,7 +938,7 @@ class AsyncResult<ResultType, ErrorType extends Error>
  *   console.log(invalidResult.error instanceof ValidationError); // true
  * }
  *
- * // Note: Error mappers should not throw. The behavior is undefined if they do.
+ * // Note: Error mappers should not throw. If they do, the thrown error will be unhandled.
  * ```
  */
 function tryImpl<T>(fn: () => T): Result<T, Error>;
