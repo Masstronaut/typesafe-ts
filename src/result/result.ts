@@ -163,15 +163,22 @@ interface IResult<ResultType, ErrorType extends Error> {
      * @example
      * ```typescript
      * const failure = result.error(new Error("Original"));
-     * const wrapped = failure.map_err(err => new Error(`Wrapped: ${err.message}`));
+     * const wrapped = failure.map_error(err => new Error(`Wrapped: ${err.message}`));
      * if (wrapped.is_error()) {
      *   console.log(wrapped.error.message); // "Wrapped: Original"
      * }
      *
      * const success = result.ok("value");
-     * const unchanged = success.map_err(err => new Error("Won't be called"));
+     * const unchanged = success.map_error(err => new Error("Won't be called"));
      * console.log(unchanged.is_ok()); // true
      * ```
+     */
+    map_error<NewErrorType extends Error>(
+        fn: (error: ErrorType) => NewErrorType
+    ): Result<ResultType, NewErrorType>;
+
+    /**
+     * @deprecated Use map_error instead. This method will be removed in the next major version release.
      */
     map_err<NewErrorType extends Error>(
         fn: (error: ErrorType) => NewErrorType
@@ -422,13 +429,19 @@ class ResultImpl<ResultType, ErrorType extends Error>
         return this as unknown as Result<NewResultType, ErrorType>;
     }
 
-    map_err<NewErrorType extends Error>(
+    map_error<NewErrorType extends Error>(
         fn: (error: ErrorType) => NewErrorType
     ): Result<ResultType, NewErrorType> {
         if (this.is_error()) {
             return result.error<ResultType, NewErrorType>(fn(this.error));
         }
         return this as unknown as Result<ResultType, NewErrorType>;
+    }
+
+    map_err<NewErrorType extends Error>(
+        fn: (error: ErrorType) => NewErrorType
+    ): Result<ResultType, NewErrorType> {
+        return this.map_error(fn);
     }
 
     match<OKMatchResultType, ErrorMatchResultType>({
@@ -619,11 +632,20 @@ class AsyncResult<ResultType, ErrorType extends Error>
      * @param fn - Function to transform the error if Error
      * @returns A new AsyncResult with the transformed error if Error, otherwise the original value
      */
+    map_error<NewErrorType extends Error>(
+        fn: (error: ErrorType) => NewErrorType
+    ): AsyncResult<ResultType, NewErrorType> {
+        const newPromise = this.promise.then((result) => result.map_error(fn));
+        return new AsyncResult(newPromise);
+    }
+
+    /**
+     * @deprecated Use map_error instead. This method will be removed in the next major version release.
+     */
     map_err<NewErrorType extends Error>(
         fn: (error: ErrorType) => NewErrorType
     ): AsyncResult<ResultType, NewErrorType> {
-        const newPromise = this.promise.then((result) => result.map_err(fn));
-        return new AsyncResult(newPromise);
+        return this.map_error(fn);
     }
 
     /**
