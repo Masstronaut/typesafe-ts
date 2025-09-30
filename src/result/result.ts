@@ -714,6 +714,9 @@ class AsyncResult<ResultType, ErrorType extends Error>
      * If this AsyncResult is Error, the function is not called and the error is propagated.
      * If the async function throws or rejects, the error is caught and passed to the provided error mapper.
      *
+     * **Important**: The error mapper function should not throw. If it does throw,
+     * the thrown error will be unhandled.
+     *
      * @template NewResultType - The type of the value returned by the async function
      * @template NewErrorType - The type of the error returned by the error mapper
      * @param fn - Async function that takes the Ok value and returns a Promise
@@ -736,38 +739,70 @@ class AsyncResult<ResultType, ErrorType extends Error>
         errorMapper: (error: unknown) => NewErrorType
     ): AsyncResult<NewResultType, ErrorType | NewErrorType>;
 
+    try_async<NewResultType>(
+        fn: (value: ResultType) => Promise<NewResultType>
+    ): AsyncResult<NewResultType, ErrorType | TryAsyncError>;
+
     try_async<NewResultType, NewErrorType extends Error = TryAsyncError>(
         fn: (value: ResultType) => Promise<NewResultType>,
         errorMapper?: (error: unknown) => NewErrorType
     ): AsyncResult<NewResultType, ErrorType | NewErrorType | TryAsyncError> {
-        type PossibleErrors = ErrorType | NewErrorType | TryAsyncError;
-        const newPromise: Promise<Result<NewResultType, PossibleErrors>> =
-            this.promise
+        if (errorMapper) {
+            // When error mapper is provided, return type excludes TryAsyncError
+            const newPromise: Promise<
+                Result<NewResultType, ErrorType | NewErrorType>
+            > = this.promise
                 .then(async (result) => {
                     if (result.is_error()) {
                         return result as unknown as Result<
                             NewResultType,
-                            PossibleErrors
+                            ErrorType | NewErrorType
                         >;
                     }
                     const value = await fn(result.value);
-                    return ResultImpl.ok<NewResultType, PossibleErrors>(value);
+                    return ResultImpl.ok<
+                        NewResultType,
+                        ErrorType | NewErrorType
+                    >(value);
                 })
                 .catch((originalError: unknown) => {
-                    if (errorMapper) {
-                        return ResultImpl.error<NewResultType, PossibleErrors>(
-                            errorMapper(originalError)
-                        );
+                    return ResultImpl.error<
+                        NewResultType,
+                        ErrorType | NewErrorType
+                    >(errorMapper(originalError));
+                });
+            return new AsyncResult(newPromise);
+        } else {
+            // When no error mapper is provided, return type includes TryAsyncError
+            const newPromise: Promise<
+                Result<NewResultType, ErrorType | TryAsyncError>
+            > = this.promise
+                .then(async (result) => {
+                    if (result.is_error()) {
+                        return result as unknown as Result<
+                            NewResultType,
+                            ErrorType | TryAsyncError
+                        >;
                     }
-
-                    return ResultImpl.error<NewResultType, PossibleErrors>(
+                    const value = await fn(result.value);
+                    return ResultImpl.ok<
+                        NewResultType,
+                        ErrorType | TryAsyncError
+                    >(value);
+                })
+                .catch((originalError: unknown) => {
+                    return ResultImpl.error<
+                        NewResultType,
+                        ErrorType | TryAsyncError
+                    >(
                         new TryAsyncError(
                             fn.name || fn.toString(),
                             originalError
                         )
                     );
                 });
-        return new AsyncResult(newPromise);
+            return new AsyncResult(newPromise);
+        }
     }
 
     /**
@@ -828,6 +863,170 @@ class AsyncResult<ResultType, ErrorType extends Error>
  *   .and_then(str => str.length > 0 ? result.ok(str) : result.error(new Error("Empty string")));
  * ```
  */
+
+/**
+ * Executes a function and wraps the result in a Result type.
+ * If the function executes successfully, returns an Ok Result with the return value.
+ * If the function throws an error, returns an Error Result with the caught error.
+ *
+ * @template T - The return type of the function
+ * @param fn - A function that may throw an error
+ * @returns A Result containing either the function's return value or the caught error
+ *
+ * @example
+ * ```typescript
+ * // Working with a function that might throw
+ * function parseJSON(jsonString: string): any {
+ *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
+ * }
+ *
+ * const validResult = result.try(() => parseJSON('{"name": "John"}'));
+ * if (validResult.is_ok()) {
+ *   console.log(validResult.value.name); // "John"
+ * }
+ *
+ * const invalidResult = result.try(() => parseJSON('invalid json'));
+ * if (invalidResult.is_error()) {
+ *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
+ * }
+ *
+ * // Converting existing throwing APIs
+ * const fileContent = result.try(() => fs.readFileSync('file.txt', 'utf8'));
+ * const parsedNumber = result.try(() => {
+ *   const num = parseInt(userInput);
+ *   if (isNaN(num)) throw new Error("Not a valid number");
+ *   return num;
+ * });
+ *
+ * // With custom error mapping
+ * class ValidationError extends Error {
+ *   field: string;
+ *   constructor(message: string, field: string) {
+ *     super(message);
+ *     this.name = "ValidationError";
+ *     this.field = field;
+ *   }
+ * }
+ *
+ * const parseJson = (jsonString: string) =>
+ *   result.try(
+ *     () => JSON.parse(jsonString),
+ *     (error) => new ValidationError(`Invalid JSON: ${String(error)}`, "json")
+ *   );
+ *
+ * const invalidResult = parseJson("invalid json");
+ * if (invalidResult.is_error()) {
+ *   console.log(invalidResult.error.field); // "json"
+ *   console.log(invalidResult.error instanceof ValidationError); // true
+ * }
+ *
+ * // Note: Error mappers should not throw. The behavior is undefined if they do.
+ * ```
+ */
+function tryImpl<T>(fn: () => T): Result<T, Error>;
+function tryImpl<T, ErrorType extends Error>(
+    fn: () => T,
+    errorMapper: (error: unknown) => ErrorType
+): Result<T, ErrorType>;
+function tryImpl<T, ErrorType extends Error = Error>(
+    fn: () => T,
+    errorMapper?: (error: unknown) => ErrorType
+): Result<T, ErrorType | Error> {
+    // need to use try/catch to wrap throwing functions in results.
+    // eslint-disable-next-line typesafe-ts/enforce-result-usage
+    try {
+        return ResultImpl.ok(fn());
+    } catch (error) {
+        if (errorMapper) {
+            return ResultImpl.error(errorMapper(error));
+        }
+        return ResultImpl.error(
+            error instanceof Error ? error : new Error(String(error))
+        );
+    }
+}
+
+/**
+ * Executes an async function and wraps the result in an `AsyncResult`.
+ * The `AsyncResult` is a `PromiseLike` that supports the Result method chaining interfaces,
+ * and it can be `await`ed to access the `Result` and its contained value or error.
+ * If the function resolves successfully, the AsyncResult will contain an Ok Result with the resolved value.
+ * If the function rejects or throws, the AsyncResult will contain an Error Result with the caught error.
+ * To access the final `Result`, you will need to first `await` the `AsyncResult`.
+ *
+ * @template T - The resolved type of the async function
+ * @param fn - An async function that may reject or throw
+ * @returns An AsyncResult that can be chained immediately or awaited to get the final Result
+ *
+ * @example
+ * ```typescript
+ * // Immediate chaining without intermediate awaits
+ * const processedUser = result.try_async(() => fetchUserData("123"))
+ *   .map(user => ({ ...user, name: user.name.toUpperCase() }))
+ *   .and_then(user => user.name ? result.ok(user) : result.error(new Error("Invalid name")))
+ *   .or_else(() => result.ok(createDefaultUser()));
+ *
+ * // Only await when you need the final result
+ * const finalUser = await processedUser;
+ * if (finalUser.is_ok()) {
+ *   console.log("Processed user:", finalUser.value.name);
+ * }
+ *
+ * // Converting Promise-based APIs with chaining
+ * const fileData = await result.try_async(() => fs.promises.readFile('file.txt', 'utf8'))
+ *   .map(content => content.trim())
+ *   .and_then(content => content.length > 0 ? result.ok(content) : result.error(new Error("Empty file")));
+ *
+ * // With custom error mapping
+ * class NetworkError extends Error {
+ *   statusCode: number;
+ *   constructor(message: string, statusCode: number) {
+ *     super(message);
+ *     this.name = "NetworkError";
+ *     this.statusCode = statusCode;
+ *   }
+ * }
+ *
+ * const fetchData = async (url: string) =>
+ *   result.try_async(
+ *     () => fetch(url).then(r => r.json()),
+ *     (error) => new NetworkError(`Request failed: ${String(error)}`, 500)
+ *   );
+ *
+ * const userData = await fetchData('/api/user/123');
+ * if (userData.is_error()) {
+ *   console.log(userData.error.statusCode); // 500
+ *   console.log(userData.error instanceof NetworkError); // true
+ * }
+ * ```
+ */
+function tryAsyncImpl<T>(fn: () => Promise<T>): AsyncResult<T, Error>;
+function tryAsyncImpl<T, ErrorType extends Error>(
+    fn: () => Promise<T>,
+    errorMapper: (error: unknown) => ErrorType
+): AsyncResult<T, ErrorType>;
+function tryAsyncImpl<T, ErrorType extends Error = Error>(
+    fn: () => Promise<T>,
+    errorMapper?: (error: unknown) => ErrorType
+): AsyncResult<T, ErrorType | Error> {
+    const promise = (async (): Promise<Result<T, ErrorType | Error>> => {
+        // need to use try/catch to wrap throwing functions in a `Result`.
+        // eslint-disable-next-line typesafe-ts/enforce-result-usage
+        try {
+            const value = await fn();
+            return ResultImpl.ok(value);
+        } catch (error) {
+            if (errorMapper) {
+                return ResultImpl.error(errorMapper(error));
+            }
+            return ResultImpl.error(
+                error instanceof Error ? error : new Error(String(error))
+            );
+        }
+    })();
+    return new AsyncResult(promise);
+}
+
 const result = {
     /**
      * Creates a successful Result containing the provided value.
@@ -895,100 +1094,9 @@ const result = {
         error: ErrorType
     ): Result<ResultType, ErrorType> => ResultImpl.error(error),
 
-    /**
-     * Executes a function and wraps the result in a Result type.
-     * If the function executes successfully, returns an Ok Result with the return value.
-     * If the function throws an error, returns an Error Result with the caught error.
-     *
-     * @template T - The return type of the function
-     * @param fn - A function that may throw an error
-     * @returns A Result containing either the function's return value or the caught error
-     *
-     * @example
-     * ```typescript
-     * // Working with a function that might throw
-     * function parseJSON(jsonString: string): any {
-     *   return JSON.parse(jsonString); // Throws SyntaxError for invalid JSON
-     * }
-     *
-     * const validResult = result.try(() => parseJSON('{"name": "John"}'));
-     * if (validResult.is_ok()) {
-     *   console.log(validResult.value.name); // "John"
-     * }
-     *
-     * const invalidResult = result.try(() => parseJSON('invalid json'));
-     * if (invalidResult.is_error()) {
-     *   console.log(invalidResult.error.message); // "Unexpected token i in JSON at position 0"
-     * }
-     *
-     * // Converting existing throwing APIs
-     * const fileContent = result.try(() => fs.readFileSync('file.txt', 'utf8'));
-     * const parsedNumber = result.try(() => {
-     *   const num = parseInt(userInput);
-     *   if (isNaN(num)) throw new Error("Not a valid number");
-     *   return num;
-     * });
-     * ```
-     */
-    try: <T>(fn: () => T): Result<T, Error> => {
-        // need to use try/catch to wrap throwing functions in results.
-        // eslint-disable-next-line typesafe-ts/enforce-result-usage
-        try {
-            return ResultImpl.ok(fn());
-        } catch (error) {
-            return ResultImpl.error(
-                error instanceof Error ? error : new Error(String(error))
-            );
-        }
-    },
+    try: tryImpl,
 
-    /**
-     * Executes an async function and wraps the result in an `AsyncResult`.
-     * The `AsyncResult` is a `PromiseLike` that supports the Result method chaining interfaces,
-     * and it can be `await`ed to access the `Result` and its contained value or error.
-     * If the function resolves successfully, the AsyncResult will contain an Ok Result with the resolved value.
-     * If the function rejects or throws, the AsyncResult will contain an Error Result with the caught error.
-     * To access the final `Result`, you will need to first `await` the `AsyncResult`.
-     *
-     * @template T - The resolved type of the async function
-     * @param fn - An async function that may reject or throw
-     * @returns An AsyncResult that can be chained immediately or awaited to get the final Result
-     *
-     * @example
-     * ```typescript
-     * // Immediate chaining without intermediate awaits
-     * const processedUser = result.try_async(() => fetchUserData("123"))
-     *   .map(user => ({ ...user, name: user.name.toUpperCase() }))
-     *   .and_then(user => user.name ? result.ok(user) : result.error(new Error("Invalid name")))
-     *   .or_else(() => result.ok(createDefaultUser()));
-     *
-     * // Only await when you need the final result
-     * const finalUser = await processedUser;
-     * if (finalUser.is_ok()) {
-     *   console.log("Processed user:", finalUser.value.name);
-     * }
-     *
-     * // Converting Promise-based APIs with chaining
-     * const fileData = await result.try_async(() => fs.promises.readFile('file.txt', 'utf8'))
-     *   .map(content => content.trim())
-     *   .and_then(content => content.length > 0 ? result.ok(content) : result.error(new Error("Empty file")));
-     * ```
-     */
-    try_async: <T>(fn: () => Promise<T>): AsyncResult<T, Error> => {
-        const promise = (async (): Promise<Result<T, Error>> => {
-            // need to use try/catch to wrap throwing functions in a `Result`.
-            // eslint-disable-next-line typesafe-ts/enforce-result-usage
-            try {
-                const value = await fn();
-                return ResultImpl.ok(value);
-            } catch (error) {
-                return ResultImpl.error(
-                    error instanceof Error ? error : new Error(String(error))
-                );
-            }
-        })();
-        return new AsyncResult(promise);
-    },
+    try_async: tryAsyncImpl,
 
     /**
      * Retries a result-returning function until it succeeds or has failed for all of the requested retries.
