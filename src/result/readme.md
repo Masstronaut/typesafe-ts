@@ -403,7 +403,7 @@ function readConfig(): Result<ConfigData, Error> {
         return JSON.parse(data);
     });
 
-    return result.map_err((error) => {
+    return result.map_error((error) => {
         console.error("Failed to read config:", error);
         return error;
     });
@@ -437,7 +437,7 @@ async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
             const response = await fetch(`/api/users/${id}`);
             return await response.json();
         })
-        .map_err((error) => {
+        .map_error((error) => {
             console.error("Failed to fetch user:", error);
             return error;
         });
