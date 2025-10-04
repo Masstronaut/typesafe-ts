@@ -8,18 +8,4 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-/**
- * typesafe-ts: TypeScript utilities for writing safer, more correct code
- *
- * This package provides monadic types and utilities that help prevent common runtime errors
- * by making potential failures explicit in the type system, along with ESLint rules to enforce their usage.
- */
-
-// Export Optional monad and related utilities
-export * from "./optional/index.js";
-
-// Export Result monad and related utilities
-export * from "./result/index.js";
-
-// Export Brand type utilities
-export * from "./brand/index.js";
+export { brand, type Brand, apply_brand, branded_error } from "./brand.js";

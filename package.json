@@ -24,6 +24,10 @@
         "./result/lint": {
             "types": "./dist/result/lint.d.ts",
             "default": "./dist/result/lint.js"
+        },
+        "./brand": {
+            "types": "./dist/brand/index.d.ts",
+            "default": "./dist/brand/index.js"
         }
     },
     "scripts": {
@@ -50,6 +54,9 @@
         "monads",
         "optional",
         "result",
+        "brand",
+        "branded-types",
+        "tagged-unions",
         "error-handling",
         "type-safe"
     ],
