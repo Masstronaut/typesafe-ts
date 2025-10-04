@@ -12,7 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  * Unique symbol used to store brand identifiers on branded values.
  * Guarantees no conflicts with properties from other libraries or user code.
  */
-const brand_symbol = Symbol.for("brand");
+const brand_symbol = Symbol.for("typesafe-ts/brand");
 
 type BrandableTypes = ((...args: unknown[]) => unknown) | object;
 /**
@@ -163,8 +163,13 @@ function branded_error<const BrandString extends string>(
             readonly [brand_symbol] = brand;
         }
         Base.prototype.name = brand_string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return
-        return Base as any;
+        return Base as new <
+            ErrorData extends Record<string, unknown> = Record<string, never>,
+        >(
+            args: [Record<string, never>] extends [ErrorData]
+                ? void | { message?: string; cause?: unknown }
+                : BrandedErrorCustomData<ErrorData>
+        ) => BrandedErrorType<BrandString, ErrorData>;
     };
 
     return BrandedError(brand_string);

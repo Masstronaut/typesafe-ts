@@ -107,7 +107,7 @@ if (error) {
         case "PasswordTooShort": // error is narrowed to TooShortError
             console.log(`Min ${error.minLength} characters`);
             break;
-        case "PasswordNoNumber": // Error is narrowed to NoNumberError
+        case "PasswordNoNumber": // error is narrowed to NoNumberError
             console.log("Must contain a number");
             break;
     }
