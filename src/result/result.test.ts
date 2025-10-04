@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert";
 
-import { result, type Result } from "./result.ts";
+import {
+    result,
+    type Result,
+    type RetryError,
+    type TryAsyncError,
+} from "./result.ts";
+import { Assert, type Check } from "../assert/index.ts";
 
 await test("Result", async (t) => {
     await t.test("Construction & Factory Methods", async (t) => {
@@ -494,6 +500,11 @@ await test("Result", async (t) => {
             const okResult = result.ok("hello");
             const values = Array.from(okResult);
 
+            Assert<
+                Check.Equal<typeof values, string[]>,
+                "Array.from should extract correct value type from Ok result"
+            >();
+
             assert.strictEqual(values.length, 1);
             assert.strictEqual(values[0], "hello");
 
@@ -502,12 +513,22 @@ await test("Result", async (t) => {
             );
             const emptyValues = Array.from(errorResult);
 
+            Assert<
+                Check.Equal<typeof emptyValues, string[]>,
+                "Array.from should maintain value type even for Error results"
+            >();
+
             assert.strictEqual(emptyValues.length, 0);
         });
 
         await t.test("generator works with spread operator", () => {
             const okResult = result.ok(100);
             const values = [...okResult];
+
+            Assert<
+                Check.Equal<typeof values, number[]>,
+                "Spread operator should extract correct value type from Ok result"
+            >();
 
             assert.strictEqual(values.length, 1);
             assert.strictEqual(values[0], 100);
@@ -517,12 +538,27 @@ await test("Result", async (t) => {
             );
             const emptyValues = [...errorResult];
 
+            Assert<
+                Check.Equal<typeof emptyValues, number[]>,
+                "Spread operator should maintain value type even for Error results"
+            >();
+
             assert.strictEqual(emptyValues.length, 0);
         });
 
         await t.test("can be used with destructuring", () => {
             const okResult = result.ok("test");
             const [first, second] = okResult;
+
+            Assert<
+                Check.Equal<typeof first, string | undefined>,
+                "Destructuring should allow value type or undefined from Ok result"
+            >();
+
+            Assert<
+                Check.Equal<typeof second, string | undefined>,
+                "Destructuring second element should be value type or undefined"
+            >();
 
             assert.strictEqual(first, "test");
             assert.strictEqual(second, undefined);
@@ -531,6 +567,11 @@ await test("Result", async (t) => {
                 new Error("Failed")
             );
             const [errorFirst, errorSecond] = errorResult;
+
+            Assert<
+                Check.Equal<typeof errorFirst, string | undefined>,
+                "Destructuring should maintain value type even for Error results"
+            >();
 
             assert.strictEqual(errorFirst, undefined);
             assert.strictEqual(errorSecond, undefined);
@@ -943,6 +984,15 @@ await test("Result", async (t) => {
         await t.test("works with different value types", () => {
             const numberFn = (): Result<number, Error> => result.ok(42);
             const numberResult = result.retry(numberFn, 1);
+
+            Assert<
+                Check.Equal<
+                    typeof numberResult,
+                    Result<number, RetryError<Error>>
+                >,
+                "Retry should preserve exact function return type for number"
+            >();
+
             assert.ok(numberResult.is_ok());
             if (numberResult.is_ok()) {
                 assert.strictEqual(numberResult.value, 42);
@@ -951,6 +1001,7 @@ await test("Result", async (t) => {
             const objectFn = (): Result<{ name: string }, Error> =>
                 result.ok({ name: "test" });
             const objectResult = result.retry(objectFn, 1);
+
             assert.ok(objectResult.is_ok());
             if (objectResult.is_ok()) {
                 assert.deepStrictEqual(objectResult.value, { name: "test" });
@@ -958,6 +1009,7 @@ await test("Result", async (t) => {
 
             const nullFn = (): Result<null, Error> => result.ok(null);
             const nullResult = result.retry(nullFn, 1);
+
             assert.ok(nullResult.is_ok());
             if (nullResult.is_ok()) {
                 assert.strictEqual(nullResult.value, null);
@@ -983,7 +1035,15 @@ await test("Result", async (t) => {
             };
 
             const retryResult = result.retry(customErrorFn, 2);
+            Assert<
+                Check.Equal<
+                    typeof retryResult,
+                    Result<string, RetryError<CustomError>>
+                >
+            >();
+
             assert.ok(retryResult.is_error());
+
             if (retryResult.is_error()) {
                 assert.strictEqual(
                     retryResult.error.name,
@@ -1574,6 +1634,15 @@ await test("Result", async (t) => {
                 return result.ok(42);
             };
             const numberResult = await result.retry_async(numberFn, 1);
+
+            Assert<
+                Check.Equal<
+                    typeof numberResult,
+                    Result<number, RetryError<Error>>
+                >,
+                "Async retry should preserve exact function return type for number"
+            >();
+
             assert.ok(numberResult.is_ok());
             if (numberResult.is_ok()) {
                 assert.strictEqual(numberResult.value, 42);
@@ -1584,6 +1653,7 @@ await test("Result", async (t) => {
                 return result.ok({ name: "async test" });
             };
             const objectResult = await result.retry_async(objectFn, 1);
+
             assert.ok(objectResult.is_ok());
             if (objectResult.is_ok()) {
                 assert.deepStrictEqual(objectResult.value, {
@@ -1596,6 +1666,12 @@ await test("Result", async (t) => {
                 return result.ok(null);
             };
             const nullResult = await result.retry_async(nullFn, 1);
+
+            Assert<
+                Check.Equal<typeof nullResult, Result<null, RetryError<Error>>>,
+                "Async retry should preserve exact function return type for null"
+            >();
+
             assert.ok(nullResult.is_ok());
             if (nullResult.is_ok()) {
                 assert.strictEqual(nullResult.value, null);
@@ -1627,6 +1703,15 @@ await test("Result", async (t) => {
             };
 
             const retryResult = await result.retry_async(customErrorFn, 2);
+
+            Assert<
+                Check.Equal<
+                    typeof retryResult,
+                    Result<string, RetryError<CustomAsyncError>>
+                >,
+                "Async retry should preserve custom error types from function signature"
+            >();
+
             assert.ok(retryResult.is_error());
             if (retryResult.is_error()) {
                 assert.strictEqual(
@@ -1817,6 +1902,469 @@ await test("Result", async (t) => {
                 assert.strictEqual(result1.value, "Function 1 success");
                 assert.strictEqual(result2.value, "Function 2 success");
             }
+        });
+    });
+
+    await t.test("Error Mapper Functionality", async (t) => {
+        class CustomError extends Error {
+            code: string;
+            constructor(message: string, code: string) {
+                super(message);
+                this.name = "CustomError";
+                this.code = code;
+            }
+        }
+
+        class ValidationError extends Error {
+            field: string;
+            constructor(message: string, field: string) {
+                super(message);
+                this.name = "ValidationError";
+                this.field = field;
+            }
+        }
+
+        await t.test("result.try() with error mapper", async (t) => {
+            await t.test("maps Error instances to custom error", () => {
+                const throwingFn = () => {
+                    throw new Error("Original error");
+                };
+                const errorMapper = (error: unknown) =>
+                    new CustomError(`Mapped: ${String(error)}`, "MAP001");
+
+                const res = result.try(throwingFn, errorMapper);
+
+                Assert<
+                    Check.Equal<typeof res, Result<never, CustomError>>,
+                    "Result error type should match the error mapper output type"
+                >();
+
+                assert.ok(res.is_error());
+                if (res.is_error()) {
+                    Assert<
+                        Check.False<
+                            Check.Extends<TryAsyncError, typeof res.error>
+                        >,
+                        "TryAsyncError should NOT be in error type union when error mapper is provided"
+                    >();
+
+                    assert.ok(res.error instanceof CustomError);
+                    assert.strictEqual(
+                        res.error.message,
+                        "Mapped: Error: Original error"
+                    );
+                    assert.strictEqual(res.error.code, "MAP001");
+                }
+            });
+
+            await t.test("maps string throws to custom error", () => {
+                const throwingFn = () => {
+                    // eslint-disable-next-line @typescript-eslint/only-throw-error
+                    throw "string error";
+                };
+                const errorMapper = (error: unknown) =>
+                    new ValidationError(
+                        `String error: ${String(error)}`,
+                        "stringField"
+                    );
+
+                const res = result.try(throwingFn, errorMapper);
+
+                assert.ok(res.is_error());
+                if (res.is_error()) {
+                    assert.ok(res.error instanceof ValidationError);
+                    assert.strictEqual(
+                        res.error.message,
+                        "String error: string error"
+                    );
+                    assert.strictEqual(res.error.field, "stringField");
+                }
+            });
+
+            await t.test("maps object throws to custom error", () => {
+                const throwingFn = () => {
+                    // eslint-disable-next-line @typescript-eslint/only-throw-error
+                    throw { code: 404, message: "Not found" };
+                };
+                const errorMapper = (error: unknown) => {
+                    const err = error as { code: number; message: string };
+                    return new CustomError(
+                        `HTTP ${err.code}: ${err.message}`,
+                        `HTTP${err.code}`
+                    );
+                };
+
+                const res = result.try(throwingFn, errorMapper);
+
+                assert.ok(res.is_error());
+                if (res.is_error()) {
+                    assert.ok(res.error instanceof CustomError);
+                    assert.strictEqual(
+                        res.error.message,
+                        "HTTP 404: Not found"
+                    );
+                    assert.strictEqual(res.error.code, "HTTP404");
+                }
+            });
+
+            await t.test("handles null/undefined throws", () => {
+                const throwingFn = () => {
+                    // eslint-disable-next-line @typescript-eslint/only-throw-error
+                    throw null;
+                };
+                const errorMapper = (error: unknown) =>
+                    new CustomError(`Null error: ${String(error)}`, "NULL");
+
+                const res = result.try(throwingFn, errorMapper);
+
+                assert.ok(res.is_error());
+                if (res.is_error()) {
+                    assert.ok(res.error instanceof CustomError);
+                    assert.strictEqual(res.error.message, "Null error: null");
+                    assert.strictEqual(res.error.code, "NULL");
+                }
+            });
+        });
+
+        await t.test("result.try_async() with error mapper", async (t) => {
+            await t.test(
+                "maps async Error rejections to custom error",
+                async () => {
+                    // eslint-disable-next-line @typescript-eslint/require-await
+                    const asyncThrowingFn = async () => {
+                        throw new Error("Async error");
+                    };
+                    const errorMapper = (error: unknown) =>
+                        new CustomError(
+                            `Async mapped: ${String(error)}`,
+                            "ASYNC001"
+                        );
+
+                    const asyncResult = result.try_async(
+                        asyncThrowingFn,
+                        errorMapper
+                    );
+                    const res = await asyncResult;
+
+                    Assert<
+                        Check.Equal<typeof res, Result<never, CustomError>>,
+                        "Async result should have same error mapping as sync result"
+                    >();
+
+                    assert.ok(res.is_error());
+                    if (res.is_error()) {
+                        Assert<
+                            Check.False<
+                                Check.Extends<TryAsyncError, typeof res.error>
+                            >,
+                            "TryAsyncError should NOT be in error type union when error mapper is provided"
+                        >();
+
+                        assert.ok(res.error instanceof CustomError);
+                        assert.strictEqual(
+                            res.error.message,
+                            "Async mapped: Error: Async error"
+                        );
+                        assert.strictEqual(res.error.code, "ASYNC001");
+                    }
+                }
+            );
+
+            await t.test(
+                "maps async string rejections to custom error",
+                async () => {
+                    // eslint-disable-next-line @typescript-eslint/require-await
+                    const asyncThrowingFn = async () => {
+                        // eslint-disable-next-line @typescript-eslint/only-throw-error
+                        throw "async string error";
+                    };
+                    const errorMapper = (error: unknown) =>
+                        new ValidationError(
+                            `Async string: ${String(error)}`,
+                            "asyncField"
+                        );
+
+                    const res = await result.try_async(
+                        asyncThrowingFn,
+                        errorMapper
+                    );
+
+                    assert.ok(res.is_error());
+                    if (res.is_error()) {
+                        assert.ok(res.error instanceof ValidationError);
+                        assert.strictEqual(
+                            res.error.message,
+                            "Async string: async string error"
+                        );
+                        assert.strictEqual(res.error.field, "asyncField");
+                    }
+                }
+            );
+
+            await t.test(
+                "maps promise rejections to custom error",
+                async () => {
+                    const asyncRejectingFn = () =>
+                        Promise.reject(new TypeError("Type error"));
+                    const errorMapper = (error: unknown) => {
+                        const err = error as Error;
+                        return new CustomError(
+                            `Promise rejection: ${err.message}`,
+                            "REJECT"
+                        );
+                    };
+
+                    const res = await result.try_async(
+                        asyncRejectingFn,
+                        errorMapper
+                    );
+
+                    assert.ok(res.is_error());
+                    if (res.is_error()) {
+                        assert.ok(res.error instanceof CustomError);
+                        assert.strictEqual(
+                            res.error.message,
+                            "Promise rejection: Type error"
+                        );
+                        assert.strictEqual(res.error.code, "REJECT");
+                    }
+                }
+            );
+
+            await t.test("supports chaining with mapped errors", async () => {
+                // eslint-disable-next-line @typescript-eslint/require-await
+                const asyncThrowingFn = async () => {
+                    throw new Error("Chain error");
+                };
+                const errorMapper = (error: unknown) =>
+                    new CustomError(`Chained: ${String(error)}`, "CHAIN");
+
+                const res = await result
+                    .try_async(asyncThrowingFn, errorMapper)
+                    .map((value: string) => value.toUpperCase())
+                    .and_then<string, CustomError>((value) =>
+                        result.ok(value.toUpperCase())
+                    )
+                    .or_else<string, CustomError>(() => result.ok("fallback"));
+
+                Assert<
+                    Check.Equal<typeof res, Result<string, CustomError>>,
+                    "Chained operations should preserve mapped error types"
+                >();
+
+                assert.ok(res.is_ok());
+                if (res.is_ok()) {
+                    assert.strictEqual(res.value, "fallback");
+                }
+            });
+        });
+
+        await t.test(
+            "AsyncResult.try_async() instance method with error mapper",
+            async (t) => {
+                await t.test(
+                    "maps errors from chained async operations",
+                    async () => {
+                        const errorMapper = (error: unknown) =>
+                            new CustomError(
+                                `Instance mapped: ${String(error)}`,
+                                "INSTANCE"
+                            );
+
+                        const res = await result
+                            .try_async(() => Promise.resolve("initial"))
+                            // eslint-disable-next-line @typescript-eslint/require-await
+                            .try_async(async () => {
+                                throw new Error("Chained error");
+                            }, errorMapper);
+
+                        assert.ok(res.is_error());
+                        if (res.is_error()) {
+                            Assert<
+                                Check.True<
+                                    Check.Extends<
+                                        TryAsyncError,
+                                        typeof res.error
+                                    >
+                                >,
+                                "Error mapper should preserve TryAsyncError from previous operations in the union"
+                            >();
+
+                            assert.ok(res.error instanceof CustomError);
+                            assert.strictEqual(
+                                res.error.message,
+                                "Instance mapped: Error: Chained error"
+                            );
+                            assert.strictEqual(res.error.code, "INSTANCE");
+                        }
+                    }
+                );
+
+                await t.test(
+                    "maintains error from previous operation when try_async succeeds",
+                    async () => {
+                        const errorMapper = () =>
+                            new CustomError("Should not be called", "UNUSED");
+
+                        const res = await result
+                            .try_async<string>(() =>
+                                Promise.reject(new Error("Previous error"))
+                            )
+                            // eslint-disable-next-line @typescript-eslint/require-await
+                            .try_async(async () => "success", errorMapper);
+
+                        assert.ok(res.is_error());
+                        if (res.is_error()) {
+                            assert.ok(res.error instanceof Error);
+                            assert.strictEqual(
+                                res.error.message,
+                                "Previous error"
+                            );
+                        }
+                    }
+                );
+
+                await t.test(
+                    "successfully chains when previous operation succeeds",
+                    async () => {
+                        const errorMapper = (error: unknown) =>
+                            new CustomError(
+                                `Should not be called: ${String(error)}`,
+                                "UNUSED"
+                            );
+
+                        const res = await result
+                            .try_async(() => Promise.resolve("initial success"))
+                            .try_async(
+                                // eslint-disable-next-line @typescript-eslint/require-await
+                                async (value) => `transformed: ${value}`,
+                                errorMapper
+                            );
+
+                        assert.ok(res.is_ok());
+                        if (res.is_ok()) {
+                            assert.strictEqual(
+                                res.value,
+                                "transformed: initial success"
+                            );
+                        }
+                    }
+                );
+            }
+        );
+
+        await t.test("Error mapper type safety", async (t) => {
+            await t.test("enforces Error return type at compile time", () => {
+                const throwingFn = () => {
+                    throw new Error("Test");
+                };
+
+                const validMapper = (error: unknown) =>
+                    new CustomError(String(error), "VALID");
+                const res1 = result.try(throwingFn, validMapper);
+                assert.ok(res1.is_error());
+
+                // This would not compile in TypeScript:
+                // const invalidMapper = (error: unknown) => "not an error";
+                // const res2 = result.try(throwingFn, invalidMapper);
+            });
+
+            await t.test(
+                "preserves error type information in Result type",
+                () => {
+                    const throwingFn = () => {
+                        throw new Error("Test");
+                    };
+                    const mapper = (error: unknown) =>
+                        new ValidationError(String(error), "test");
+
+                    const res = result.try(throwingFn, mapper);
+
+                    Assert<
+                        Check.Equal<typeof res, Result<never, ValidationError>>,
+                        "Error mapper should preserve custom error type properties"
+                    >();
+
+                    assert.ok(res.is_error());
+                    if (res.is_error()) {
+                        assert.ok(res.error instanceof ValidationError);
+                        assert.strictEqual(res.error.field, "test");
+                    }
+                }
+            );
+        });
+
+        await t.test("Error mapper with real-world scenarios", async (t) => {
+            await t.test(
+                "HTTP request simulation with custom errors",
+                async () => {
+                    const fetchData = async (url: string) =>
+                        result.try_async(
+                            // eslint-disable-next-line @typescript-eslint/require-await
+                            async () => {
+                                if (url.includes("404")) {
+                                    // eslint-disable-next-line @typescript-eslint/only-throw-error
+                                    throw { status: 404, message: "Not Found" };
+                                }
+                                if (url.includes("500")) {
+                                    throw new Error("Internal Server Error");
+                                }
+                                return { data: "success" };
+                            },
+                            (error) => {
+                                if (
+                                    typeof error === "object" &&
+                                    error !== null &&
+                                    "status" in error
+                                ) {
+                                    const httpError = error as {
+                                        status: number;
+                                        message: string;
+                                    };
+                                    return new CustomError(
+                                        `HTTP ${httpError.status}: ${httpError.message}`,
+                                        `HTTP${httpError.status}`
+                                    );
+                                }
+                                return new CustomError(
+                                    `Network error: ${String(error)}`,
+                                    "NETWORK"
+                                );
+                            }
+                        );
+
+                    const successResult = await fetchData(
+                        "https://api.example.com/data"
+                    );
+                    assert.ok(successResult.is_ok());
+
+                    const notFoundResult = await fetchData(
+                        "https://api.example.com/404"
+                    );
+                    assert.ok(notFoundResult.is_error());
+                    if (notFoundResult.is_error()) {
+                        assert.ok(notFoundResult.error instanceof CustomError);
+                        assert.strictEqual(
+                            notFoundResult.error.code,
+                            "HTTP404"
+                        );
+                    }
+
+                    const serverErrorResult = await fetchData(
+                        "https://api.example.com/500"
+                    );
+                    assert.ok(serverErrorResult.is_error());
+                    if (serverErrorResult.is_error()) {
+                        assert.ok(
+                            serverErrorResult.error instanceof CustomError
+                        );
+                        assert.strictEqual(
+                            serverErrorResult.error.code,
+                            "NETWORK"
+                        );
+                    }
+                }
+            );
         });
     });
 });
