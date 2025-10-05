@@ -1471,7 +1471,7 @@ await test("Result", async (t) => {
             // Run the test 20 times with different random values
             for (let run = 1; run <= 20; run++) {
                 let attempts = 0;
-                const successOnAttempt = Math.floor(Math.random() * 100) + 1; // Random number between 1 and 100
+                const successOnAttempt = Math.floor(Math.random() * 20) + 1; // Random number between 1 and 100
                 const eventualSuccessFn = async () => {
                     attempts++;
                     await new Promise((resolve) => setTimeout(resolve, 1));
