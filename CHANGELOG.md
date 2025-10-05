@@ -1,3 +1,18 @@
+# [1.5.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.4.1...v1.5.0) (2025-10-05)
+
+
+### Bug Fixes
+
+* more precise error brand type & symbol name ([8461100](https://github.com/Masstronaut/typesafe-ts/commit/8461100499e04903c30f52d76f4751cda79be936))
+* removed iterations from unnecessarily slow result test ([8ece5a4](https://github.com/Masstronaut/typesafe-ts/commit/8ece5a47a1febb072916ab2378af8c72874e108a))
+* use Object.defineProperty for brand symbol on prototype ([10fe175](https://github.com/Masstronaut/typesafe-ts/commit/10fe175da81a0c671aa6a41ef09e3f090768ace2))
+
+
+### Features
+
+* add brand module for nominal typing and branded errors ([6aa734b](https://github.com/Masstronaut/typesafe-ts/commit/6aa734b30a803939369f69658a8e5ff6da882b6f))
+* add error mapper support to Result.try() and try_async() ([5be3ae9](https://github.com/Masstronaut/typesafe-ts/commit/5be3ae969d58c05993b692621673711f24b9cab5))
+
 ## [1.4.1](https://github.com/Masstronaut/typesafe-ts/compare/v1.4.0...v1.4.1) (2025-09-19)
 
 # [1.4.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.3.0...v1.4.0) (2025-09-03)
