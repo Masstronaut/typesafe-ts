@@ -148,9 +148,10 @@ function branded_error<const BrandString extends string>(
     type BrandedErrorType<
         BrandString extends string,
         ErrorData extends Record<string, unknown>,
-    > = CustomError & {
-        readonly [brand_symbol]: BrandString;
-    } & BrandedErrorCustomData<ErrorData>;
+    > = CustomError &
+        BrandedErrorCustomData<ErrorData> & {
+            readonly [brand_symbol]: BrandString;
+        };
 
     const BrandedError = <BrandString extends string>(
         brand: BrandString
@@ -160,8 +161,17 @@ function branded_error<const BrandString extends string>(
             : BrandedErrorCustomData<ErrorData>
     ) => BrandedErrorType<BrandString, ErrorData> => {
         class Base extends CustomError<Record<string, never>> {
-            readonly [brand_symbol] = brand;
+            declare readonly [brand_symbol]: BrandString;
         }
+
+        // Add the brand symbol as a non-enumerable property on the prototype. One copy for every instance.
+        // eslint-disable-next-line typesafe-ts/enforce-result-usage
+        Object.defineProperty(Base.prototype, brand_symbol, {
+            value: brand,
+            enumerable: false,
+            writable: false,
+            configurable: false,
+        });
         Base.prototype.name = brand_string;
         return Base as new <
             ErrorData extends Record<string, unknown> = Record<string, never>,
