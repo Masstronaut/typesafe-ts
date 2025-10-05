@@ -342,4 +342,17 @@ await test("branded_error", async (t) => {
         assert.strictEqual(brandA, "MyError");
         assert.strictEqual(brandB, "ValidationError");
     });
+
+    await t.test("should include brand_symbol in error type", () => {
+        const error = new MyError();
+
+        Assert<
+            Check.Equal<
+                keyof typeof error & typeof brand_symbol,
+                typeof brand_symbol
+            >
+        >();
+
+        assert.ok(brand_symbol in error);
+    });
 });
