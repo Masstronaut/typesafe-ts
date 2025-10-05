@@ -1,559 +1,192 @@
 # Result
 
-The `Result` type is a monadic alternative to throwing exceptions for expressing the result of operations that may succeed or fail. It provides a way to handle errors in an expressive and type-safe manner without relying on exception handling.
+A monadic type for handling operations that may succeed or fail without throwing exceptions. Provides type-safe, composable error handling with explicit error types in function signatures.
 
-Code that throws exceptions when operations fail has a couple shortcomings:
-
-1. It forces all calling code to handle exceptions, even when they may not be equipped to do so meaningfully.
-2. Exception types are not captured in function signatures, making it difficult to know what errors a function might produce.
-3. Stack unwinding from exceptions can be expensive and makes control flow less predictable.
-
-`Result` addresses these issues by wrapping either a successful value or an error in a way that makes error handling explicit and composable. It provides expressive methods that encapsulate error checking, making it possible to write robust code that gracefully handles failure cases without repetitive try-catch blocks.
-
-# The `Result` interface
-
-`Result` is fully documented inline. The best way to view its documentation is in your editor, while using it. You can also view the documentation for each method [in this source code](./result.ts).
-
-Here's an overview of the `Result` interface:
-
-```ts result.ts
-// Interface definition that can be used for type annotations.
-export interface Result<ResultType, ErrorType extends Error> {
-  // Check if the result contains an error. If it does, it will be widened to include an `error` property.
-  is_error(): this is ErrorResult<ErrorType>;
-
-  // Check if the result contains a value. If it does, it will be widened to include a `value` property.
-  is_ok(): this is OkResult<ResultType>;
-
-  // If the result is Ok, return the value. Otherwise, return the provided default value.
-  value_or(value_if_error: ResultType): ResultType;
-
-  // If the result is Error, return the error. Otherwise, return the provided default error.
-  error_or(error_if_ok: ErrorType): ErrorType;
-
-  // If the result is Ok, map the value and return a new Result with the mapped value.
-  // Otherwise, return the error unchanged.
-  map<NewResultType>(
-    fn: (value: ResultType) => NewResultType,
-  ): Result<NewResultType, ErrorType>;
-
-  // If the result is Error, map the error and return a new Result with the mapped error.
-  // Otherwise, return the value unchanged.
-  map_err<NewErrorType extends Error>(
-    fn: (error: ErrorType) => NewErrorType,
-  ): Result<ResultType, NewErrorType>;
-
-
-  // Pattern match against the result, returning the result of the appropriate callback.
-  match<OKMatchResultType, ErrorMatchResultType>({
-    on_ok,
-    on_error,
-  }: {
-    on_ok: (value: ResultType) => OKMatchResultType;
-    on_error: (error: ErrorType) => ErrorMatchResultType;
-  }): OKMatchResultType | ErrorMatchResultType;
-
-  // If this Result is Ok, apply the function to the value. Otherwise, return the error unchanged.
-  and_then<NewResultType>(
-    fn: (value: ResultType) => Result<NewResultType, ErrorType>,
-  ): Result<NewResultType, ErrorType>;
-
-  // Provide an alternative Result if this Result is Error.
-  or_else<NewErrorType extends Error>(
-    fn: (error: ErrorType) => Result<ResultType, NewErrorType>,
-  ): Result<ResultType, NewErrorType>;
-
-  // Iterator support - yields the value if Ok, nothing if Error.
-  [Symbol.iterator](): Generator<ResultType, void, unknown>;
-}
-
-export const result = {
-  ok, // constructs a `Result` with a success value
-  error, // constructs a `Result` with an error
-  try, // constructs a `Result` from a provided function. Ok if it returns, Error if it throws.
-  try_async, // constructs an `AsyncResult` from an async function that supports immediate chaining
-  retry, // executes a Result-returning function multiple times until success or retry limit is reached
-  retry_async, // executes an async Result-returning function multiple times until success or retry limit is reached
-};
-```
-
-# Async Result Chaining
-
-The `result.try_async()` method returns an `AsyncResult` type that supports immediate method chaining without requiring `await` first. `AsyncResult` is an awaitable `PromiseLike` that provides the same chaining methods as `Result` for ergonomic async operation handling.
-
-## Immediate Chaining
-
-You can chain operations directly on async results:
+## Basic Usage
 
 ```typescript
-const processed = result
-    .try_async(() => fetchUserData(userId))
-    .map((user) => user.name.toUpperCase())
-    .and_then((name) =>
-        name.length > 0
-            ? result.ok(name)
-            : result.error(new Error("Empty name"))
-    )
-    .or_else(() => result.ok("Unknown User"));
+import { result, type Result } from "./result.ts";
 
-// Only await when you need the final result
-const finalResult = await processed;
+// Creating results
+const success = result.ok("Hello, World!");
+const failure = result.error(new Error("Something went wrong"));
+
+// Type-safe access
+if (success.is_ok()) {
+    console.log(success.value); // "Hello, World!"
+}
+
+if (failure.is_error()) {
+    console.log(failure.error.message); // "Something went wrong"
+}
+
+// Safe value extraction
+console.log(success.value_or("default")); // "Hello, World!"
+console.log(failure.value_or("default")); // "default"
 ```
 
-## Practical Example
+## Wrapping Throwing Functions
 
 ```typescript
-async function processUserProfile(
-    userId: string
-): Promise<Result<UserProfile, Error>> {
-    return result
-        .try_async(() => fetchUser(userId))
-        .map((user) => ({ ...user, name: user.name.trim() }))
-        .and_then((user) =>
-            user.name
-                ? result.ok(user)
-                : result.error(new Error("Invalid user name"))
-        )
-        .map((user) => ({ ...user, lastUpdated: new Date() }))
-        .or_else((error) => {
-            console.error("Failed to process user:", error.message);
-            return result.ok(createDefaultProfile(userId));
-        });
-}
+// Wrap functions that may throw
+const parseResult = result.try(() => JSON.parse('{"name": "John"}'));
+const fileResult = result.try(() => fs.readFileSync("file.txt", "utf8"));
 
-// Usage - only await the final result
-const profileResult = await processUserProfile("user123");
+// Wrap async functions
+const fetchResult = result.try_async(() => fetch("/api/data"));
+const asyncFileResult = result.try_async(() =>
+    fs.promises.readFile("file.txt", "utf8")
+);
 ```
 
-The `AsyncResult` maintains the same error handling patterns as synchronous `Result`, with errors propagating through the chain until handled by `or_else()` or resolved by `await`.
+## Chaining Operations
 
-# Example usage
+```typescript
+// Transform values with map
+const doubled = result.ok(5).map((x) => x * 2); // Result<number, never>
 
-Sometimes an operation involves a series of steps, any of which may fail. This sort of operation often results in repetitive try-catch blocks that are tedious to write and challenging to read. It requires more code, which increases the likelihood of bugs being introduced and increases the maintenance burden.
-
-Consider this exaggerated example calculation where any of a series of steps may fail. It could benefit from `Result`'s monadic interface to simplify error handling.
-
-```ts
-function parseNumber(str: string): number {
-    const num = Number(str);
-    if (isNaN(num)) {
-        throw new Error(`Invalid number: ${str}`);
-    }
-    return num;
-}
-
-function divide(a: number, b: number): number {
-    if (b === 0) {
-        throw new Error("Division by zero");
-    }
-    return a / b;
-}
-
-function sqrt(n: number): number {
-    if (n < 0) {
-        throw new Error("Cannot take square root of negative number");
-    }
-    return Math.sqrt(n);
-}
-
-function calculateExpression(
-    numeratorStr: string,
-    denominatorStr: string
-): number | null {
-    try {
-        const numerator = parseNumber(numeratorStr);
-        try {
-            const denominator = parseNumber(denominatorStr);
-            try {
-                const quotient = divide(numerator, denominator);
-                try {
-                    const result = sqrt(quotient);
-                    return result;
-                } catch (sqrtError) {
-                    console.error("Square root error:", sqrtError.message);
-                    return null;
-                }
-            } catch (divisionError) {
-                console.error("Division error:", divisionError.message);
-                return null;
-            }
-        } catch (denominatorError) {
-            console.error("Denominator parse error:", denominatorError.message);
-            return null;
-        }
-    } catch (numeratorError) {
-        console.error("Numerator parse error:", numeratorError.message);
-        return null;
-    }
-}
-
-const result = calculateExpression("16", "4");
-if (result !== null) {
-    console.log("Result:", result);
-} else {
-    console.log("Calculation failed");
-}
-```
-
-At every step, the code needs to perform error handling with try-catch blocks. Out of 30 lines of code, ~16 of them are error handling boilerplate. Every function called by `calculateExpression` can throw exceptions, and the client code must handle the possibility of receiving `null`. That's a lot of boilerplate code, and it comes with some serious downsides:
-
-- verbose code obscures the core logic
-- more code means more opportunities for bugs
-- At any step it's possible to not handle an error, and tooling won't tell you it was missed!
-
-Let's take a look at how this code could be implemented using `Result` instead of exceptions to represent failure. Result comes with interfaces for operating on the result, whether or not it succeeds. This makes it straightforward to chain operations and handle errors. The type system will also ensure it is checked for errors, making it harder to miss handling them.
-
-```ts
-function parseNumber(str: string): Result<number, Error> {
-    const num = Number(str);
-    return isNaN(num)
-        ? result.error(new Error(`Invalid number: ${str}`))
-        : result.ok(num);
-}
-
+// Chain operations with and_then
 function divide(a: number, b: number): Result<number, Error> {
     return b === 0
         ? result.error(new Error("Division by zero"))
         : result.ok(a / b);
 }
 
-function sqrt(n: number): Result<number, Error> {
-    return n < 0
-        ? result.error(new Error("Cannot take square root of negative number"))
-        : result.ok(Math.sqrt(n));
-}
+const computation = result
+    .ok(10)
+    .and_then((x) => divide(x, 2))
+    .map((x) => x * 3); // Result<number, Error>
 
-function calculateExpression(
-    numeratorStr: string,
-    denominatorStr: string
-): Result<number, Error> {
-    return parseNumber(numeratorStr)
-        .and_then((numerator) =>
-            parseNumber(denominatorStr).and_then((denominator) =>
-                divide(numerator, denominator)
-            )
+// Handle errors with or_else
+const withFallback = computation.or_else(() => result.ok(0)); // Provide default on error
+
+// Pattern matching
+computation.match({
+    on_ok: (value) => console.log(`Result: ${value}`),
+    on_error: (error) => console.log(`Error: ${error.message}`),
+});
+```
+
+## Async Result Chaining
+
+`result.try_async()` returns an `AsyncResult` that supports immediate chaining without intermediate awaits:
+
+```typescript
+const processed = result
+    .try_async(() => fetch("/api/user/123"))
+    .try_async((response) => response.json())
+    .and_then((user) =>
+        user.name ? result.ok(user) : result.error(new Error("Invalid user"))
+    )
+    .or_else(() => result.ok({ name: "Unknown" }));
+
+// Only await the final result
+const finalResult = await processed;
+```
+
+## Exception vs Result Comparison
+
+Exception-based error handling requires nested try-catch blocks:
+
+```typescript
+// Exception-based (verbose, error-prone)
+function calculateExpression(a: string, b: string): number | null {
+    try {
+        const numA = parseNumber(a);
+        try {
+            const numB = parseNumber(b);
+            try {
+                const quotient = divide(numA, numB);
+                return Math.sqrt(quotient);
+            } catch (divisionError) {
+                return null;
+            }
+        } catch (parseError) {
+            return null;
+        }
+    } catch (parseError) {
+        return null;
+    }
+}
+```
+
+Result-based error handling chains operations cleanly:
+
+```typescript
+// Result-based (concise, type-safe)
+function calculateExpression(a: string, b: string): Result<number, Error> {
+    return parseNumber(a)
+        .and_then((numA) =>
+            parseNumber(b).and_then((numB) => divide(numA, numB))
         )
         .and_then((quotient) => sqrt(quotient));
 }
 
-const computation = calculateExpression("16", "4");
-computation.match({
-    on_ok: (value) => console.log("Result:", value),
-    on_error: (error) => console.log("Calculation failed:", error.message),
-});
-```
-
-Similar to the version using exceptions, each step of the operation will only be run if the previous step succeeded. `Result`'s `.and_then()` method encapsulates the error check and only runs the provided function if a value is present. This made it possible to implement the `calculateExpression` using `Result` in 12 lines of code, whereas before it required 30 lines.
-
-# Static Enforcement
-
-To help teams consistently adopt `Result` patterns and avoid mixing exception-based and Result-based error handling, this package includes an ESLint rule that enforces Result usage throughout your codebase.
-
-## ESLint Rule Overview
-
-The `enforce-result-usage` rule automatically detects and flags:
-
-- **Throw statements** - suggests using `result.error()` instead
-- **Try/catch blocks** - suggests using `result.try()` or `result.try_async()` instead
-- **Calls to throwing functions** - suggests wrapping with `result.try()` or `result.try_async()`
-
-The rule provides automatic fixes for most violations, making migration to Result patterns straightforward.
-
-## Installation and Setup
-
-### ESLint Flat Config Setup
-
-Add the rule to your ESLint flat configuration:
-
-```js eslint.config.js
-import { enforceResultUsage } from "./src/result/eslint-rule.js";
-
-export default [
-    {
-        files: ["**/*.ts", "**/*.tsx"],
-        plugins: {
-            "custom-result": {
-                rules: {
-                    "enforce-result-usage": enforceResultUsage,
-                },
-            },
-        },
-        rules: {
-            "custom-result/enforce-result-usage": "error",
-        },
-    },
-];
-```
-
-### Legacy ESLint Config Setup
-
-For legacy `.eslintrc` configurations:
-
-```json .eslintrc.json
-{
-    "plugins": ["custom-result"],
-    "rules": {
-        "custom-result/enforce-result-usage": "error"
-    }
-}
-```
-
-## Rule Configuration
-
-The rule accepts several options to customize its behavior:
-
-```js eslint.config.js
-export default [
-    {
-        files: ["**/*.ts", "**/*.tsx"],
-        plugins: {
-            "custom-result": {
-                rules: {
-                    "enforce-result-usage": enforceResultUsage,
-                },
-            },
-        },
-        rules: {
-            "custom-result/enforce-result-usage": [
-                "error",
-                {
-                    allowExceptions: ["validateInput", "debug*", "test*"],
-                    allowTestFiles: true,
-                    autoFix: true,
-                },
-            ],
-        },
-    },
-];
-```
-
-### Configuration Options
-
-| Option            | Type       | Default | Description                                                                                                   |
-| ----------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `allowExceptions` | `string[]` | `[]`    | Function names or patterns to exclude from the rule. Supports wildcards with `*`                              |
-| `allowTestFiles`  | `boolean`  | `true`  | Allow throw/try-catch in test files (detected by `.test.`, `.spec.`, `test/`, `tests/`, `__tests__` patterns) |
-| `autoFix`         | `boolean`  | `true`  | Enable automatic fixes for violations                                                                         |
-
-#### Exception Patterns
-
-The `allowExceptions` option supports both exact matches and wildcard patterns:
-
-```js
-{
-    allowExceptions: [
-        "validateInput", // Exact function name
-        "debug*", // Any function starting with 'debug'
-        "*Test", // Any function ending with 'Test'
-        "legacy*Helper*", // Any function containing 'legacy' and 'Helper'
-    ];
-}
-```
-
-## Violation Examples and Fixes
-
-### Throw Statements
-
-**❌ Flagged Code:**
-
-```ts
-function parseNumber(str: string): number {
-    if (isNaN(Number(str))) {
-        throw new Error(`Invalid number: ${str}`);
-    }
-    return Number(str);
-}
-```
-
-**✅ Auto-fixed Code:**
-
-```ts
 function parseNumber(str: string): Result<number, Error> {
-    if (isNaN(Number(str))) {
-        return result.error(new Error(`Invalid number: ${str}`));
-    }
-    return result.ok(Number(str));
+    const num = Number(str);
+    return isNaN(num)
+        ? result.error(new Error(`Invalid number: ${str}`))
+        : result.ok(num);
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
+## Retry Operations
 
-### Try/Catch Blocks
-
-**❌ Flagged Code:**
-
-```ts
-function readConfig(): ConfigData | null {
-    try {
-        const data = fs.readFileSync("config.json", "utf8");
-        return JSON.parse(data);
-    } catch (error) {
-        console.error("Failed to read config:", error);
-        return null;
-    }
+```typescript
+// Retry a function that returns Result
+function unreliableOperation(): Result<string, Error> {
+    return Math.random() > 0.7
+        ? result.ok("Success!")
+        : result.error(new Error("Failed"));
 }
+
+const retryResult = result.retry(unreliableOperation, 3);
+
+// Retry async operations
+async function fetchData(): Promise<Result<string, Error>> {
+    return result.try_async(() => fetch("/api/data"));
+}
+
+const asyncRetryResult = await result.retry_async(fetchData, 3);
 ```
 
-**✅ Auto-fixed Code:**
+## Iterator Support
 
-```ts
-function readConfig(): Result<ConfigData, Error> {
-    const result = result.try(() => {
-        const data = fs.readFileSync("config.json", "utf8");
-        return JSON.parse(data);
-    });
+```typescript
+// Iterate over successful values
+const results = [result.ok(1), result.error(new Error("Failed")), result.ok(3)];
 
-    return result.map_error((error) => {
-        console.error("Failed to read config:", error);
-        return error;
-    });
-}
-```
-
-**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
-
-### Async Try/Catch Blocks
-
-**❌ Flagged Code:**
-
-```ts
-async function fetchUserData(id: string): Promise<UserData | null> {
-    try {
-        const response = await fetch(`/api/users/${id}`);
-        return await response.json();
-    } catch (error) {
-        console.error("Failed to fetch user:", error);
-        return null;
+const values = [];
+for (const res of results) {
+    for (const value of res) {
+        values.push(value);
     }
 }
-```
+console.log(values); // [1, 3]
 
-**✅ Auto-fixed Code:**
-
-```ts
-async function fetchUserData(id: string): Promise<Result<UserData, Error>> {
-    return result
-        .try_async(async () => {
-            const response = await fetch(`/api/users/${id}`);
-            return await response.json();
-        })
-        .map_error((error) => {
-            console.error("Failed to fetch user:", error);
-            return error;
-        });
+// Async iteration
+for await (const value of result.try_async(() => fetchUser("123"))) {
+    console.log(value.name); // Only executes if fetch succeeds
 }
 ```
 
-**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
+## ESLint Rule
 
-### Function Calls That May Throw
+An ESLint rule is available to enforce Result usage patterns. See [lint.ts](./lint.ts) for the complete rule implementation and configuration options.
 
-**❌ Flagged Code:**
+```javascript
+// eslint.config.js
+import { enforceResultUsage } from "./src/result/lint.ts";
 
-```ts
-function processData(jsonString: string): ProcessedData {
-    const data = JSON.parse(jsonString); // May throw
-    return transformData(data);
-}
+export default [
+    {
+        files: ["**/*.ts"],
+        plugins: {
+            "typesafe-ts": {
+                rules: { "enforce-result-usage": enforceResultUsage },
+            },
+        },
+        rules: { "typesafe-ts/enforce-result-usage": "error" },
+    },
+];
 ```
-
-**✅ Auto-fixed Code:**
-
-```ts
-function processData(jsonString: string): Result<ProcessedData, Error> {
-    return result
-        .try(() => JSON.parse(jsonString))
-        .map((data) => transformData(data));
-}
-```
-
-**Disable rule:** `// eslint-disable-next-line typesafe-ts/enforce-result-usage`
-
-### Async Function Calls
-
-**❌ Flagged Code:**
-
-```ts
-async function uploadFile(file: File): Promise<UploadResult> {
-    const response = await fetch("/upload", {
-        // May throw
-        method: "POST",
-        body: file,
-    });
-    return response.json();
-}
-```
-
-**✅ Auto-fixed Code:**
-
-```ts
-async function uploadFile(file: File): Promise<Result<UploadResult, Error>> {
-    return result.try_async(async () => {
-        const response = await fetch("/upload", {
-            method: "POST",
-            body: file,
-        });
-        return response.json();
-    });
-}
-```
-
-## Message Types
-
-The rule provides four different violation messages:
-
-| Message ID          | Description                                                     | Triggered By                            |
-| ------------------- | --------------------------------------------------------------- | --------------------------------------- |
-| `noThrowStatement`  | Use `result.error()` instead of throw statements                | `throw` statements                      |
-| `noTryCatchBlock`   | Use `result.try()` or `result.try_async()` instead of try/catch | `try/catch` blocks                      |
-| `useResultTry`      | Wrap throwing function calls with `result.try()`                | Calls to functions that may throw       |
-| `useResultTryAsync` | Wrap async throwing functions with `result.try_async()`         | Calls to async functions that may throw |
-
-## Integration with Development Workflow
-
-### Running the Rule
-
-```bash
-# Check for violations
-npx eslint src/
-
-# Auto-fix violations
-npx eslint src/ --fix
-
-# Check specific files
-npx eslint src/my-file.ts --fix
-```
-
-### CI/CD Integration
-
-Add the rule to your CI pipeline to ensure Result patterns are consistently followed:
-
-```yaml .github/workflows/ci.yml
-- name: Lint with Result enforcement
-  run: |
-      npm run lint
-      # Ensure no Result violations in production code
-      npx eslint src/ --max-warnings 0
-```
-
-### Gradual Migration
-
-For existing codebases, you can gradually adopt Result patterns:
-
-1. **Start with warnings:** Set the rule to `warn` initially
-2. **Use allowExceptions:** Exclude legacy functions during migration
-3. **Enable autoFix:** Let the rule automatically convert simple cases
-4. **Manual review:** Review auto-fixed code for correctness
-5. **Strict enforcement:** Switch to `error` once migration is complete
-
-```js
-// Gradual migration configuration
-rules: {
-  'custom-result/enforce-result-usage': ['warn', {
-    allowExceptions: ['legacy*', 'old*'],
-    autoFix: true
-  }]
-}
-```
-
-The static enforcement rule helps maintain consistency across your codebase, making it easier for teams to adopt Result patterns and avoid the pitfalls of mixed error handling approaches.
