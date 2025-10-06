@@ -29,7 +29,7 @@ class DataError extends brand.Error("DataError")<{
 }> {}
 
 await test("branded_error", async (t) => {
-    await t.test("should create error with tag only", () => {
+    await t.test("creates errors that extend Error", () => {
         const error = new MyError();
 
         Assert<Check.Equal<(typeof error)[typeof brand_symbol], "MyError">>();
@@ -56,7 +56,6 @@ await test("branded_error", async (t) => {
 
         assert.strictEqual(error.field, "email");
         assert.strictEqual(error.reason, "invalid format");
-        assert.ok(error instanceof Error);
         assert.strictEqual(error[brand_symbol], "ValidationError");
     });
 
@@ -218,24 +217,7 @@ await test("branded_error", async (t) => {
         const error = new MyError();
 
         assert.ok(error instanceof MyError);
-        assert.ok(error instanceof Error);
         assert.ok(!(error instanceof OtherError));
-    });
-
-    await t.test("should be throwable", () => {
-        class MyError extends branded_error("MyError") {}
-
-        assert.throws(
-            () => {
-                throw new MyError();
-            },
-            (err: unknown) => {
-                if (err instanceof MyError) {
-                    return err[brand_symbol] === "MyError";
-                }
-                return false;
-            }
-        );
     });
 
     await t.test("should preserve data when thrown", () => {
@@ -247,10 +229,8 @@ await test("branded_error", async (t) => {
             });
         } catch (err) {
             assert.ok(err instanceof DataError);
-            if (err instanceof DataError) {
-                assert.strictEqual(err.code, 404);
-                assert.strictEqual(err[brand_symbol], "DataError");
-            }
+            assert.strictEqual(err.code, 404);
+            assert.strictEqual(err[brand_symbol], "DataError");
         }
     });
 
@@ -300,26 +280,6 @@ await test("branded_error", async (t) => {
 
         Assert<Check.Extends<typeof error.items, string[]>>();
         assert.deepStrictEqual(error.items, ["a", "b", "c"]);
-    });
-
-    await t.test("should extend standard Error", () => {
-        class MyError extends branded_error("MyError") {}
-        const error = new MyError();
-
-        assert.ok(error instanceof Error);
-    });
-
-    await t.test("should work in catch blocks expecting Error", () => {
-        class MyError extends branded_error("MyError") {}
-
-        try {
-            throw new MyError({ message: "test error" });
-        } catch (err) {
-            assert.ok(err instanceof Error);
-            if (err instanceof Error) {
-                assert.strictEqual(err.message, "test error");
-            }
-        }
     });
 
     await t.test("should be compatible with Brand<Error, Tag>", () => {
