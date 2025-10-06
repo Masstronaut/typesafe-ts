@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/Masstronaut/typesafe-ts/compare/v1.5.0...v1.5.1) (2025-10-06)
+
+
+### Bug Fixes
+
+* **brand:** branded error type now explicitly extends error ([1668bba](https://github.com/Masstronaut/typesafe-ts/commit/1668bba9c9193b79aab0b27a881a54f94ce9bdfa))
+
 # [1.5.0](https://github.com/Masstronaut/typesafe-ts/compare/v1.4.1...v1.5.0) (2025-10-05)
 
 
