@@ -122,6 +122,17 @@ function apply_brand<
 function branded_error<const BrandString extends string>(
     brand_string: BrandString
 ) {
+    type BrandedErrorCustomData<ErrorData extends Record<string, unknown>> = {
+        [Key in keyof ErrorData as Key extends keyof Error
+            ? never
+            : Key]: ErrorData[Key];
+    } & { message?: string; cause?: unknown };
+
+    type BrandedErrorType<
+        BrandString extends string,
+        ErrorData extends Record<string, unknown>,
+    > = Error & Brand<BrandedErrorCustomData<ErrorData>, BrandString>;
+
     abstract class CustomError<
         Data extends Record<string, unknown> = Record<string, never>,
     > extends Error {
@@ -138,20 +149,6 @@ function branded_error<const BrandString extends string>(
             }
         }
     }
-
-    type BrandedErrorCustomData<ErrorData extends Record<string, unknown>> = {
-        [Key in keyof ErrorData as Key extends keyof Error
-            ? never
-            : Key]: ErrorData[Key];
-    } & { message?: string; cause?: unknown };
-
-    type BrandedErrorType<
-        BrandString extends string,
-        ErrorData extends Record<string, unknown>,
-    > = CustomError &
-        BrandedErrorCustomData<ErrorData> & {
-            readonly [brand_symbol]: BrandString;
-        };
 
     const BrandedError = <BrandString extends string>(
         brand: BrandString
