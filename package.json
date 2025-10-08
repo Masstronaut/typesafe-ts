@@ -28,6 +28,10 @@
         "./brand": {
             "types": "./dist/brand/index.d.ts",
             "default": "./dist/brand/index.js"
+        },
+        "./assert": {
+            "types": "./dist/assert/index.d.ts",
+            "default": "./dist/assert/index.js"
         }
     },
     "scripts": {
