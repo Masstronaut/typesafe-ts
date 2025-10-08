@@ -1,5 +1,5 @@
 import { test } from "node:test";
-import { Assert } from "./index.ts";
+import { Assert } from "./assert.ts";
 
 await test("Assert compiles when provided `true`", () => {
     Assert<true>();
