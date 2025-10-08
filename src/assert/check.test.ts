@@ -9,7 +9,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 
 import { test } from "node:test";
-import { Assert, type Check } from "./index.ts";
+import { Assert } from "./assert.ts";
+import type * as Check from "./check.ts";
 
 await test("Check.Equal<...> is true when provided types are equal", () => {
     Assert<

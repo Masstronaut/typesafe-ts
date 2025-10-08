@@ -7,7 +7,8 @@ import {
     type RetryError,
     type TryAsyncError,
 } from "./result.ts";
-import { Assert, type Check } from "../assert/index.ts";
+import { Assert } from "../assert/assert.ts";
+import type * as Check from "../assert/check.ts";
 
 await test("Result", async (t) => {
     await t.test("Construction & Factory Methods", async (t) => {

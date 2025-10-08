@@ -11,7 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 import { test } from "node:test";
 import assert from "node:assert";
 import { brand_symbol, type Brand, brand, branded_error } from "./brand.ts";
-import { Assert, type Check } from "../assert/index.ts";
+import { Assert } from "../assert/assert.ts";
+import type * as Check from "../assert/check.ts";
 
 class MyError extends brand.Error("MyError") {}
 class ValidationError extends brand.Error("ValidationError")<{

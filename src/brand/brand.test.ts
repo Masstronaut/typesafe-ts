@@ -10,7 +10,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { Assert, type Check } from "../assert/index.ts";
+import { Assert } from "../assert/assert.ts";
+import type * as Check from "../assert/check.ts";
 import {
     type Brand,
     apply_brand,
