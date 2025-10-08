@@ -72,13 +72,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  *
  * @returns Void if assertion passes, otherwise causes a compile-time error
  *
- * @see {@link Check.Equal} - Test if two types are exactly equal
- * @see {@link Check.True} - Test if a type is exactly `true`
- * @see {@link Check.False} - Test if a type is exactly `false`
- * @see {@link Check.Extends} - Test if one type extends another
- * @see {@link Check.IsNever} - Test if a type is `never`
- * @see {@link Check.IsAny} - Test if a type is `any`
- * @see {@link Check.IsUnknown} - Test if a type is `unknown`
+ * @see {@link import("./check.ts").Equal} - Test if two types are exactly equal
+ * @see {@link import("./check.ts").True} - Test if a type is exactly `true`
+ * @see {@link import("./check.ts").False} - Test if a type is exactly `false`
+ * @see {@link import("./check.ts").Extends} - Test if one type extends another
+ * @see {@link import("./check.ts").IsNever} - Test if a type is `never`
+ * @see {@link import("./check.ts").IsAny} - Test if a type is `any`
+ * @see {@link import("./check.ts").IsUnknown} - Test if a type is `unknown`
  */
 export function Assert<
     T extends
