@@ -1,3 +1,11 @@
+## 1.6.0 (2025-10-08)
+
+* fix(test): use direct imports for type stripping compat ([338cd70](https://github.com/Masstronaut/typesafe-ts/commit/338cd70))
+* docs(assert): fix JSDoc links to use import syntax ([4a99a35](https://github.com/Masstronaut/typesafe-ts/commit/4a99a35))
+* docs(assert): improve clarity and reduce verbosity in readme ([254b50f](https://github.com/Masstronaut/typesafe-ts/commit/254b50f))
+* ci: add docs & perf improvements to changelog ([bac7412](https://github.com/Masstronaut/typesafe-ts/commit/bac7412))
+* feat: export assert module and fix import extensions ([4a2e53a](https://github.com/Masstronaut/typesafe-ts/commit/4a2e53a))
+
 ## [1.5.1](https://github.com/Masstronaut/typesafe-ts/compare/v1.5.0...v1.5.1) (2025-10-06)
 
 
