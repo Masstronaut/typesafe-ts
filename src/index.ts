@@ -23,3 +23,6 @@ export * from "./result/index.js";
 
 // Export Brand type utilities
 export * from "./brand/index.js";
+
+// Export Assert utilities
+export * from "./assert/index.js";
