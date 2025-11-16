@@ -1,3 +1,8 @@
+## 1.7.0 (2025-11-16)
+
+* fix: fix npm audit issues ([626ccae](https://github.com/Masstronaut/typesafe-ts/commit/626ccae))
+* feat(result): add factory methods for AsyncResult from resolved values ([1b6dd30](https://github.com/Masstronaut/typesafe-ts/commit/1b6dd30))
+
 ## 1.6.0 (2025-10-08)
 
 * fix(test): use direct imports for type stripping compat ([338cd70](https://github.com/Masstronaut/typesafe-ts/commit/338cd70))
