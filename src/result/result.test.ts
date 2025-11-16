@@ -42,6 +42,41 @@ await test("Result", async (t) => {
             }
         });
 
+        await t.test(
+            "result.ok_async() creates resolved AsyncResult values",
+            async () => {
+                const asyncOk = result.ok_async<string, TypeError>("value");
+                const awaited: Result<string, TypeError> = await asyncOk;
+
+                assert.ok(awaited.is_ok());
+                if (awaited.is_ok()) {
+                    assert.strictEqual(awaited.value, "value");
+                }
+            }
+        );
+
+        await t.test(
+            "result.ok_async() rejects Promise inputs at the type level",
+            () => {
+                // @ts-expect-error - result.ok_async() does not accept Promises
+                result.ok_async(Promise.resolve("invalid"));
+            }
+        );
+
+        await t.test(
+            "result.error_async() creates resolved AsyncResult errors",
+            async () => {
+                const error = new Error("async failure");
+                const asyncError = result.error_async<string, Error>(error);
+                const awaited: Result<string, Error> = await asyncError;
+
+                assert.ok(awaited.is_error());
+                if (awaited.is_error()) {
+                    assert.strictEqual(awaited.error, error);
+                }
+            }
+        );
+
         await t.test("constructor validates arguments defensively", () => {
             const okResult = result.ok("test");
             // Since the ResultImpl is not part of the public interface,

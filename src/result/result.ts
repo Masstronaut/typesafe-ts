@@ -334,6 +334,10 @@ type Result<ResultType, ErrorType extends Error> = IResult<
 const none_value: unique symbol = Symbol("None");
 type NoneType = typeof none_value;
 
+type NonPromiseValue<ValueType> = [ValueType] extends [PromiseLike<unknown>]
+    ? "Error: Value provided to `result.ok_async()` must not be a Promise. Use `result.try_async()` to wrap asynchronous values."
+    : ValueType;
+
 /**
  * Error type returned by retry operations when all attempts fail.
  * Contains the original error message, retry count, and all accumulated errors from failed attempts.
@@ -851,38 +855,6 @@ class AsyncResult<ResultType, ErrorType extends Error>
 }
 
 /**
- * Factory functions for creating Result instances.
- * This module provides the primary API for constructing Result values.
- *
- * @property {function} ok - Creates a successful Result containing the provided value
- * @property {function} error - Creates a failed Result containing the provided error
- * @property {function} try - Executes a function and wraps the result in a Result type
- * @property {function} try_async - Executes an async function and returns an awaitable AsyncResult that supports immediate chaining
- * @property {function} retry - Retries a Result-returning function multiple times until success
- * @property {function} retry_async - Retries an async Result-returning function multiple times until success
- *
- * @example
- * ```typescript
- * import { result, type Result } from "./result.ts";
- *
- * // Creating success results
- * const success = result.ok("Hello, World!");
- * const number = result.ok(42);
- * const nullValue = result.ok(null);
- *
- * // Creating error results
- * const failure = result.error(new Error("Something went wrong"));
- * const customError = result.error(new TypeError("Type mismatch"));
- *
- * // Chaining operations
- * const processed = result.ok("  hello  ")
- *   .map(str => str.trim())
- *   .map(str => str.toUpperCase())
- *   .and_then(str => str.length > 0 ? result.ok(str) : result.error(new Error("Empty string")));
- * ```
- */
-
-/**
  * Executes a function and wraps the result in a Result type.
  * If the function executes successfully, returns an Ok Result with the return value.
  * If the function throws an error, returns an Error Result with the caught error.
@@ -1045,6 +1017,39 @@ function tryAsyncImpl<T, ErrorType extends Error = Error>(
     return new AsyncResult(promise);
 }
 
+/**
+ * Factory functions for creating Result instances.
+ * This module provides the primary API for constructing Result values.
+ *
+ * @property {function} ok - Creates a successful Result containing the provided value
+ * @property {function} error - Creates a failed Result containing the provided error
+ * @property {function} ok_async - Creates an already-resolved AsyncResult containing the provided value
+ * @property {function} error_async - Creates an already-resolved AsyncResult containing the provided error
+ * @property {function} try - Executes a function and wraps the result in a Result type
+ * @property {function} try_async - Executes an async function and returns an awaitable AsyncResult that supports immediate chaining
+ * @property {function} retry - Retries a Result-returning function multiple times until success
+ * @property {function} retry_async - Retries an async Result-returning function multiple times until success
+ *
+ * @example
+ * ```typescript
+ * import { result, type Result } from "./result.ts";
+ *
+ * // Creating success results
+ * const success = result.ok("Hello, World!");
+ * const number = result.ok(42);
+ * const nullValue = result.ok(null);
+ *
+ * // Creating error results
+ * const failure = result.error(new Error("Something went wrong"));
+ * const customError = result.error(new TypeError("Type mismatch"));
+ *
+ * // Chaining operations
+ * const processed = result.ok("  hello  ")
+ *   .map(str => str.trim())
+ *   .map(str => str.toUpperCase())
+ *   .and_then(str => str.length > 0 ? result.ok(str) : result.error(new Error("Empty string")));
+ * ```
+ */
 const result = {
     /**
      * Creates a successful Result containing the provided value.
@@ -1111,6 +1116,66 @@ const result = {
     error: <ResultType, ErrorType extends Error = Error>(
         error: ErrorType
     ): Result<ResultType, ErrorType> => ResultImpl.error(error),
+
+    /**
+     * Creates an AsyncResult that has already resolved to an Ok Result.
+     * Useful for synchronous functions that must return AsyncResult
+     * because one or more branches invoke async code.
+     *
+     * @template ResultType - The type of the success value
+     * @template ErrorType - The type of potential errors (defaults to Error)
+     * @param value - The non-Promise value to wrap in an already-resolved AsyncResult
+     * @returns An AsyncResult that resolves to an Ok Result containing the provided value
+     *
+     * @example
+     * ```typescript
+     * async function fetchOrFallback(id: string): AsyncResult<User, Error> {
+     *   const cached = cache.get(id);
+     *   if (cached) {
+     *     return result.ok_async(cached);
+     *   }
+     *   return result.try_async(() => fetchUser(id));
+     * }
+     * ```
+     */
+    ok_async: <ResultType, ErrorType extends Error = Error>(
+        value: NonPromiseValue<ResultType>
+    ): AsyncResult<ResultType, ErrorType> => {
+        const promise = Promise.resolve(
+            ResultImpl.ok<ResultType, ErrorType>(value as ResultType)
+        );
+        return new AsyncResult(promise);
+    },
+
+    /**
+     * Creates an AsyncResult that has already resolved to an Error Result.
+     * Useful for synchronous functions that must return AsyncResult
+     * because one or more branches invoke async code.
+     *
+     * @template ResultType - The type of potential success values
+     * @template ErrorType - The type of the error (defaults to Error)
+     * @param error - The error to wrap in an already-resolved AsyncResult
+     * @returns An AsyncResult that resolves to an Error Result containing the provided error
+     *
+     * @example
+     * ```typescript
+     * async function createUser(input: UserInput): AsyncResult<User, ValidationError> {
+     *   const validationIssue = validate(input);
+     *   if (validationIssue) {
+     *     return result.error_async<User, ValidationError>(validationIssue);
+     *   }
+     *   return result.try_async(() => persist(input));
+     * }
+     * ```
+     */
+    error_async: <ResultType, ErrorType extends Error = Error>(
+        error: ErrorType
+    ): AsyncResult<ResultType, ErrorType> => {
+        const promise = Promise.resolve(
+            ResultImpl.error<ResultType, ErrorType>(error)
+        );
+        return new AsyncResult(promise);
+    },
 
     try: tryImpl,
 
