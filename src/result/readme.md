@@ -84,6 +84,22 @@ const processed = result
 const finalResult = await processed;
 ```
 
+If a function must return an `AsyncResult` but some branches can be resolved synchronously, use `result.ok_async()` / `result.error_async()` to return an `AsyncResult` with a resolved value:
+
+```typescript
+async function loadUser(id: string) {
+    const cached = cache.get(id);
+    if (cached) {
+        return result.ok_async(cached);
+    }
+    const validationIssue = validate(id);
+    if (validationIssue) {
+        return result.error_async(validationIssue);
+    }
+    return result.try_async(() => fetchUser(id));
+}
+```
+
 ## Exception vs Result Comparison
 
 Exception-based error handling requires nested try-catch blocks:
