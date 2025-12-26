@@ -1,3 +1,9 @@
+## <small>1.7.1 (2025-12-26)</small>
+
+* test(lint): test coverage for additional linting rules ([fe85e57](https://github.com/Masstronaut/typesafe-ts/commit/fe85e57))
+* chore: bump semantic-release versions for security ([7b86c2a](https://github.com/Masstronaut/typesafe-ts/commit/7b86c2a))
+* chore: esbuild minify & comment strip ([fd69769](https://github.com/Masstronaut/typesafe-ts/commit/fd69769))
+
 ## 1.7.0 (2025-11-16)
 
 * fix: fix npm audit issues ([626ccae](https://github.com/Masstronaut/typesafe-ts/commit/626ccae))
