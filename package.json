@@ -35,7 +35,7 @@
         }
     },
     "scripts": {
-        "build": "tsc --project tsconfig.build.json",
+        "build": "tsc --project tsconfig.build.json && esbuild \"dist/**/*.js\" --outdir=dist --outbase=dist --format=esm --minify --legal-comments=none --sourcemap --allow-overwrite",
         "clean": "rm -rf dist",
         "test": "node --test --experimental-test-coverage",
         "typecheck": "tsc --noEmit",
@@ -92,6 +92,7 @@
         "@typescript-eslint/parser": "^8.39.0",
         "@typescript-eslint/rule-tester": "^8.39.0",
         "@typescript-eslint/utils": "^8.39.0",
+        "esbuild": "^0.25.10",
         "eslint": "^9.17.0",
         "husky": "^9.1.7",
         "jiti": "^2.4.2",

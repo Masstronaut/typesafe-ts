@@ -419,6 +419,23 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
             if (node.callee.type !== AST_NODE_TYPES.MemberExpression)
                 return false;
 
+            // Check if the object looks like it's a string to avoid false positives
+            // with custom .match() methods (e.g., Result.match, Matcher.match)
+            const object = node.callee.object;
+            const isLikelyString =
+                // String literal: "text".match(...)
+                (object.type === AST_NODE_TYPES.Literal &&
+                    typeof object.value === "string") ||
+                // Template literal: `text ${var}`.match(...)
+                object.type === AST_NODE_TYPES.TemplateLiteral ||
+                // Identifier with string-like name that suggests it's a string
+                (object.type === AST_NODE_TYPES.Identifier &&
+                    /^(text|str|string|content|message|input|output|name|value|data|source|target)s?$/i.test(
+                        object.name
+                    ));
+
+            if (!isLikelyString) return false;
+
             // String.match() typically takes a RegExp or string as first argument
             // This is a heuristic to identify string match vs other match methods
             if (node.arguments.length === 0) return false;
