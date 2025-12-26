@@ -423,6 +423,38 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
             ],
             output: `const matches = optional.from_nullable(text.match(/pattern/));`,
         },
+        {
+            name: "Direct call to string.match with string literal pattern",
+            code: `const matches = text.match("pattern");`,
+            errors: [
+                {
+                    messageId: "useOptionalFromNullable",
+                },
+            ],
+            output: `const matches = optional.from_nullable(text.match("pattern"));`,
+        },
+        {
+            name: "Direct call to string.match with template literal pattern",
+            code: "const matches = text.match(`pattern`);",
+            errors: [
+                {
+                    messageId: "useOptionalFromNullable",
+                },
+            ],
+            output: "const matches = optional.from_nullable(text.match(`pattern`));",
+        },
+        {
+            name: "Direct call to string.match with identifier pattern",
+            code: `const pattern = /pattern/;
+      const matches = text.match(pattern);`,
+            errors: [
+                {
+                    messageId: "useOptionalFromNullable",
+                },
+            ],
+            output: `const pattern = /pattern/;
+      const matches = optional.from_nullable(text.match(pattern));`,
+        },
 
         {
             name: "Result.match() calls with nullable returns should trigger the rule",
