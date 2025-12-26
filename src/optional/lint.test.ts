@@ -188,6 +188,12 @@ ruleTester.run("enforce-optional-usage", enforceOptionalUsage, {
         return getValue() || "default";
       }`,
         },
+        {
+            name: "Custom .match() method (not String.prototype.match) should not trigger",
+            code: `const result = myMatcher.match("pattern");
+      const result2 = customObject.match(/regex/);
+      const result3 = patternMatcher.match(\`template\`);`,
+        },
     ],
 
     invalid: [
