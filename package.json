@@ -1,6 +1,6 @@
 {
     "name": "typesafe-ts",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -67,7 +67,7 @@
     "homepage": "https://github.com/Masstronaut/typesafe-ts#readme",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Masstronaut/typesafe-ts.git"
+        "url": "git+https://github.com/Masstronaut/typesafe-ts.git"
     },
     "bugs": {
         "url": "https://github.com/Masstronaut/typesafe-ts/issues"

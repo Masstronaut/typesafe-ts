@@ -1,3 +1,8 @@
+## <small>1.7.2 (2026-06-17)</small>
+
+* ci: enable staged publishing ([1aaf15b](https://github.com/Masstronaut/typesafe-ts/commit/1aaf15b))
+* perf: linting rule performance improvements ([64fdaf7](https://github.com/Masstronaut/typesafe-ts/commit/64fdaf7))
+
 ## <small>1.7.1 (2025-12-26)</small>
 
 * test(lint): test coverage for additional linting rules ([fe85e57](https://github.com/Masstronaut/typesafe-ts/commit/fe85e57))
