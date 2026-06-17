@@ -83,7 +83,13 @@
         [
             "@semantic-release/npm",
             {
-                "npmPublish": true
+                "npmPublish": false
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "publishCmd": "npm stage publish"
             }
         ],
         "@semantic-release/github",
