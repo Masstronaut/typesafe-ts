@@ -31,6 +31,30 @@ const createRule = ESLintUtils.RuleCreator(
         `https://github.com/masstronaut/typesafe-ts/blob/main/src/optional/readme.md`
 );
 
+const nullableAPIs = new Set([
+    "getElementById",
+    "querySelector",
+    "getElementsByClassName",
+    "getElementsByTagName",
+    "find",
+    "pop",
+    "shift",
+]);
+const stringLikeIdentifierPattern =
+    /^(text|str|string|content|message|input|output|name|value|data|source|target)s?$/i;
+
+function isOptionalWrapperCall(node: TSESTree.CallExpression): boolean {
+    return (
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.object.type === AST_NODE_TYPES.Identifier &&
+        node.callee.object.name === "optional" &&
+        node.callee.property.type === AST_NODE_TYPES.Identifier &&
+        (node.callee.property.name === "from" ||
+            node.callee.property.name === "from_async" ||
+            node.callee.property.name === "from_nullable")
+    );
+}
+
 /**
  * ESLint rule that enforces Optional usage patterns instead of nullable returns and direct nullable function calls.
  *
@@ -80,6 +104,45 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
     defaultOptions: [{ allowExceptions: [], autoFix: true }],
     create(context, [options]) {
         const { allowExceptions = [], autoFix = true } = options;
+        const exactExceptions =
+            allowExceptions.length === 0
+                ? undefined
+                : new Set(
+                      allowExceptions.filter(
+                          (exception) => !exception.includes("*")
+                      )
+                  );
+        const wildcardExceptions =
+            allowExceptions.length === 0
+                ? undefined
+                : allowExceptions
+                      .filter((exception) => exception.includes("*"))
+                      .map(
+                          (exception) =>
+                              new RegExp(
+                                  `^${exception
+                                      .split("*")
+                                      .map((part) =>
+                                          part.replace(
+                                              /[.*+?^${}()|[\]\\]/g,
+                                              "\\$&"
+                                          )
+                                      )
+                                      .join(".*")}$`
+                              )
+                      );
+        let optionalWrapperDepth = 0;
+        const functionStack: Array<
+            | TSESTree.FunctionDeclaration
+            | TSESTree.FunctionExpression
+            | TSESTree.ArrowFunctionExpression
+        > = [];
+        const returnStatementsCache = new WeakMap<
+            | TSESTree.FunctionDeclaration
+            | TSESTree.FunctionExpression
+            | TSESTree.ArrowFunctionExpression,
+            TSESTree.ReturnStatement[]
+        >();
 
         function isNullableUnion(node: TSESTree.TSTypeAnnotation): boolean {
             // Check for standalone null or undefined types
@@ -95,11 +158,15 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                 return false;
 
             const union = node.typeAnnotation;
-            return union.types.some(
-                (type) =>
+            for (const type of union.types) {
+                if (
                     type.type === AST_NODE_TYPES.TSNullKeyword ||
                     type.type === AST_NODE_TYPES.TSUndefinedKeyword
-            );
+                ) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function getNonNullableType(
@@ -114,14 +181,23 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
             }
 
             const union = typeAnnotation.typeAnnotation;
-            const nonNullTypes = union.types.filter(
-                (type) =>
+            let nonNullTypeIndex = -1;
+            let nonNullTypeCount = 0;
+
+            for (let index = 0; index < union.types.length; index += 1) {
+                const type = union.types[index];
+                if (
+                    type &&
                     type.type !== AST_NODE_TYPES.TSNullKeyword &&
                     type.type !== AST_NODE_TYPES.TSUndefinedKeyword
-            );
+                ) {
+                    nonNullTypeIndex = index;
+                    nonNullTypeCount += 1;
+                }
+            }
 
-            if (nonNullTypes.length === 1) {
-                const type = nonNullTypes[0];
+            if (nonNullTypeCount === 1) {
+                const type = union.types[nonNullTypeIndex];
                 if (
                     type &&
                     type.type === AST_NODE_TYPES.TSTypeReference &&
@@ -142,95 +218,23 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
         }
 
         function isExceptionFunction(name: string): boolean {
-            return allowExceptions.some((exception) => {
-                if (exception.includes("*")) {
-                    const pattern = new RegExp(exception.replace(/\*/g, ".*"));
-                    return pattern.test(name);
-                }
-                return exception === name;
-            });
+            if (allowExceptions.length === 0) return false;
+
+            return (
+                exactExceptions?.has(name) === true ||
+                wildcardExceptions?.some((exception) =>
+                    exception.test(name)
+                ) === true
+            );
         }
 
-        function isInsideOptionalFrom(node: TSESTree.Node): boolean {
-            let parent: TSESTree.Node = node.parent!;
-
-            while (parent) {
-                if (
-                    parent.type === AST_NODE_TYPES.CallExpression &&
-                    parent.callee.type === AST_NODE_TYPES.MemberExpression &&
-                    parent.callee.object.type === AST_NODE_TYPES.Identifier &&
-                    parent.callee.object.name === "optional" &&
-                    parent.callee.property.type === AST_NODE_TYPES.Identifier &&
-                    (parent.callee.property.name === "from" ||
-                        parent.callee.property.name === "from_async" ||
-                        parent.callee.property.name === "from_nullable")
-                ) {
-                    return true;
-                }
-
-                parent = parent.parent!;
-            }
-            return false;
-        }
-
-        // Helper to collect return statements using ESLint's visitor pattern
         function collectReturnStatements(
             functionNode:
                 | TSESTree.FunctionDeclaration
                 | TSESTree.FunctionExpression
                 | TSESTree.ArrowFunctionExpression
         ): TSESTree.ReturnStatement[] {
-            const returnStatements: TSESTree.ReturnStatement[] = [];
-
-            // Use context.sourceCode.visitorKeys for type-safe traversal
-            function traverse(node: TSESTree.Node): void {
-                if (node.type === AST_NODE_TYPES.ReturnStatement) {
-                    returnStatements.push(node);
-                    return; // Don't traverse into the return expression
-                }
-
-                // Don't traverse into nested functions
-                if (
-                    node !== functionNode &&
-                    (node.type === AST_NODE_TYPES.FunctionDeclaration ||
-                        node.type === AST_NODE_TYPES.FunctionExpression ||
-                        node.type === AST_NODE_TYPES.ArrowFunctionExpression)
-                ) {
-                    return;
-                }
-
-                // Traverse child nodes using ESLint's visitor keys
-                const visitorKeys =
-                    context.sourceCode.visitorKeys[node.type] || [];
-                for (const key of visitorKeys) {
-                    const child = (node as unknown as Record<string, unknown>)[
-                        key
-                    ];
-                    if (Array.isArray(child)) {
-                        child.forEach((item) => {
-                            if (
-                                item &&
-                                typeof item === "object" &&
-                                "type" in item
-                            ) {
-                                traverse(item as TSESTree.Node);
-                            }
-                        });
-                    } else if (
-                        child &&
-                        typeof child === "object" &&
-                        "type" in child
-                    ) {
-                        traverse(child as TSESTree.Node);
-                    }
-                }
-            }
-
-            if (functionNode.body) {
-                traverse(functionNode.body);
-            }
-
-            return returnStatements;
+            return returnStatementsCache.get(functionNode) ?? [];
         }
 
         function hasNullableReturnStatements(
@@ -256,28 +260,22 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                 return false; // No returns, effectively void
             }
 
-            const nakedReturns = returnStatements.filter(
-                (stmt) => !stmt.argument
-            );
-            const valueReturns = returnStatements.filter(
-                (stmt) => stmt.argument
-            );
+            let hasNakedReturn = false;
+            let hasValueReturn = false;
 
-            // If ALL returns are naked returns, treat as void function
-            if (nakedReturns.length > 0 && valueReturns.length === 0) {
-                return false; // Pure void function pattern
+            for (const returnStatement of returnStatements) {
+                if (!returnStatement.argument) {
+                    hasNakedReturn = true;
+                    continue;
+                }
+
+                hasValueReturn = true;
+                if (containsNullableValue(returnStatement.argument)) {
+                    return true;
+                }
             }
 
-            // For functions with value returns, check for nullable values
-            const hasNullableValueReturns = valueReturns.some((returnStmt) => {
-                return containsNullableValue(returnStmt.argument);
-            });
-
-            // Flag if there are nullable value returns OR mixed return patterns
-            return (
-                hasNullableValueReturns ||
-                (nakedReturns.length > 0 && valueReturns.length > 0)
-            );
+            return hasNakedReturn && hasValueReturn;
         }
 
         function containsNullableValue(
@@ -430,9 +428,7 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                 object.type === AST_NODE_TYPES.TemplateLiteral ||
                 // Identifier with string-like name that suggests it's a string
                 (object.type === AST_NODE_TYPES.Identifier &&
-                    /^(text|str|string|content|message|input|output|name|value|data|source|target)s?$/i.test(
-                        object.name
-                    ));
+                    stringLikeIdentifierPattern.test(object.name));
 
             if (!isLikelyString) return false;
 
@@ -459,6 +455,67 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
             );
         }
 
+        function onFunctionExit(
+            node:
+                | TSESTree.FunctionDeclaration
+                | TSESTree.FunctionExpression
+                | TSESTree.ArrowFunctionExpression
+        ): void {
+            if (optionalWrapperDepth > 0) {
+                functionStack.length -= 1;
+                return;
+            }
+
+            // Check explicit return type annotations
+            const hasExplicitNullableReturn =
+                node.returnType && isNullableUnion(node.returnType);
+
+            // Check if function returns null/undefined without explicit annotation
+            const hasImplicitNullableReturn =
+                !node.returnType && hasNullableReturnStatements(node);
+
+            if (!hasExplicitNullableReturn && !hasImplicitNullableReturn) {
+                functionStack.length -= 1;
+                return;
+            }
+
+            // Skip if this is a method function (handled by parent MethodDefinition selector)
+            if (
+                node.type === AST_NODE_TYPES.FunctionExpression &&
+                node.parent?.type === AST_NODE_TYPES.MethodDefinition
+            ) {
+                functionStack.length -= 1;
+                return;
+            }
+
+            const functionName =
+                (node.type === AST_NODE_TYPES.FunctionDeclaration &&
+                    node.id?.name) ||
+                (node.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+                    node.parent.id.type === AST_NODE_TYPES.Identifier &&
+                    node.parent.id.name) ||
+                "anonymous";
+
+            if (isExceptionFunction(functionName)) {
+                functionStack.length -= 1;
+                return;
+            }
+
+            const baseType = node.returnType
+                ? getNonNullableType(node.returnType)
+                : inferNonNullableTypeFromReturns(node);
+
+            context.report({
+                node: node.returnType || node.id || node,
+                messageId: "noNullableReturn" as const,
+                data: { type: baseType },
+                // Disable auto-fix for function return types as it requires
+                // updating all return statements within the function body
+                fix: null,
+            });
+            functionStack.length -= 1;
+        }
+
         return {
             // Check function return types (includes methods via FunctionExpression)
             "FunctionDeclaration, FunctionExpression, ArrowFunctionExpression"(
@@ -467,52 +524,29 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                     | TSESTree.FunctionExpression
                     | TSESTree.ArrowFunctionExpression
             ) {
-                // Skip if this function is inside an optional.from() or optional.from_async() call
-                if (isInsideOptionalFrom(node)) {
-                    return;
+                functionStack.push(node);
+                returnStatementsCache.set(node, []);
+            },
+
+            ReturnStatement(node: TSESTree.ReturnStatement) {
+                const functionNode = functionStack[functionStack.length - 1];
+                if (functionNode) {
+                    returnStatementsCache.get(functionNode)?.push(node);
                 }
+            },
 
-                // Check explicit return type annotations
-                const hasExplicitNullableReturn =
-                    node.returnType && isNullableUnion(node.returnType);
+            "FunctionDeclaration:exit"(node: TSESTree.FunctionDeclaration) {
+                onFunctionExit(node);
+            },
 
-                // Check if function returns null/undefined without explicit annotation
-                const hasImplicitNullableReturn =
-                    !node.returnType && hasNullableReturnStatements(node);
+            "FunctionExpression:exit"(node: TSESTree.FunctionExpression) {
+                onFunctionExit(node);
+            },
 
-                if (!hasExplicitNullableReturn && !hasImplicitNullableReturn)
-                    return;
-
-                // Skip if this is a method function (handled by parent MethodDefinition selector)
-                if (
-                    node.type === AST_NODE_TYPES.FunctionExpression &&
-                    node.parent?.type === AST_NODE_TYPES.MethodDefinition
-                ) {
-                    return;
-                }
-
-                const functionName =
-                    (node.type === AST_NODE_TYPES.FunctionDeclaration &&
-                        node.id?.name) ||
-                    (node.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-                        node.parent.id.type === AST_NODE_TYPES.Identifier &&
-                        node.parent.id.name) ||
-                    "anonymous";
-
-                if (isExceptionFunction(functionName)) return;
-
-                const baseType = node.returnType
-                    ? getNonNullableType(node.returnType)
-                    : inferNonNullableTypeFromReturns(node);
-
-                context.report({
-                    node: node.returnType || node.id || node,
-                    messageId: "noNullableReturn" as const,
-                    data: { type: baseType },
-                    // Disable auto-fix for function return types as it requires
-                    // updating all return statements within the function body
-                    fix: null,
-                });
+            "ArrowFunctionExpression:exit"(
+                node: TSESTree.ArrowFunctionExpression
+            ) {
+                onFunctionExit(node);
             },
 
             // Check method return types
@@ -567,56 +601,13 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
 
             // Check calls to functions that might return null/undefined
             CallExpression(node: TSESTree.CallExpression) {
-                // Skip if this is already an optional.from(), optional.from_async(), or optional.from_nullable() call
-                if (
-                    node.callee.type === AST_NODE_TYPES.MemberExpression &&
-                    node.callee.object.type === AST_NODE_TYPES.Identifier &&
-                    node.callee.object.name === "optional" &&
-                    node.callee.property.type === AST_NODE_TYPES.Identifier &&
-                    (node.callee.property.name === "from" ||
-                        node.callee.property.name === "from_async" ||
-                        node.callee.property.name === "from_nullable")
-                ) {
+                if (isOptionalWrapperCall(node)) {
+                    optionalWrapperDepth += 1;
                     return;
                 }
 
-                // Skip if this call is inside an optional.from() or optional.from_async() arrow function
-                // or if it's a direct argument to optional.from_nullable()
-                let parent: TSESTree.Node = node.parent;
-                while (parent) {
-                    // Check for optional.from_nullable(thisCall)
-                    if (
-                        parent.type === AST_NODE_TYPES.CallExpression &&
-                        parent.callee.type ===
-                            AST_NODE_TYPES.MemberExpression &&
-                        parent.callee.object.type ===
-                            AST_NODE_TYPES.Identifier &&
-                        parent.callee.object.name === "optional" &&
-                        parent.callee.property.type ===
-                            AST_NODE_TYPES.Identifier &&
-                        parent.callee.property.name === "from_nullable"
-                    ) {
-                        return;
-                    }
-                    // Check for optional.from(() => thisCall) or optional.from_async(() => thisCall)
-                    if (
-                        parent.type ===
-                            AST_NODE_TYPES.ArrowFunctionExpression &&
-                        parent.parent?.type === AST_NODE_TYPES.CallExpression &&
-                        parent.parent.callee.type ===
-                            AST_NODE_TYPES.MemberExpression &&
-                        parent.parent.callee.object.type ===
-                            AST_NODE_TYPES.Identifier &&
-                        parent.parent.callee.object.name === "optional" &&
-                        parent.parent.callee.property.type ===
-                            AST_NODE_TYPES.Identifier &&
-                        (parent.parent.callee.property.name === "from" ||
-                            parent.parent.callee.property.name === "from_async")
-                    ) {
-                        return;
-                    }
-                    if (!parent.parent) break;
-                    parent = parent.parent;
+                if (optionalWrapperDepth > 0) {
+                    return;
                 }
 
                 // Check for common nullable-returning functions
@@ -630,22 +621,11 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                     functionName = node.callee.property.name;
                 }
 
-                // Common DOM/JS APIs that return null
-                const nullableAPIs = [
-                    "getElementById",
-                    "querySelector",
-                    "getElementsByClassName",
-                    "getElementsByTagName",
-                    "find",
-                    "pop",
-                    "shift",
-                ];
-
                 // Special handling for 'match' - only flag String.prototype.match, not other match methods
                 const isMatchCall = functionName === "match";
                 const isStringMatch = isMatchCall && isStringMatchCall(node);
 
-                if (nullableAPIs.includes(functionName) || isStringMatch) {
+                if (nullableAPIs.has(functionName) || isStringMatch) {
                     context.report({
                         node,
                         messageId: "useOptionalFromNullable" as const,
@@ -660,6 +640,12 @@ export const enforceOptionalUsage = createRule<Options, MessageIds>({
                               }
                             : null,
                     });
+                }
+            },
+
+            "CallExpression:exit"(node: TSESTree.CallExpression) {
+                if (isOptionalWrapperCall(node)) {
+                    optionalWrapperDepth -= 1;
                 }
             },
         };
