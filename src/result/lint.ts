@@ -33,6 +33,52 @@ const createRule = ESLintUtils.RuleCreator(
         `https://github.com/masstronaut/typesafe-ts/blob/main/src/result/readme.md`
 );
 
+const throwingAPIs = new Set([
+    "parse",
+    "parseInt",
+    "parseFloat",
+    "atob",
+    "btoa",
+    "decodeURI",
+    "decodeURIComponent",
+    "fetch",
+    "require",
+    "import",
+    "readFileSync",
+    "writeFileSync",
+]);
+
+const asyncAPIs = new Set(["fetch", "import", "readFile", "writeFile"]);
+
+const throwingMemberAPIs: Readonly<Record<string, ReadonlySet<string>>> = {
+    JSON: new Set(["parse"]),
+    Proxy: new Set(["revocable"]),
+    Array: new Set(["from"]),
+    Object: new Set(["defineProperty", "setPrototypeOf"]),
+    String: new Set(["fromCharCode", "fromCodePoint"]),
+    Symbol: new Set(["keyFor"]),
+    Reflect: new Set([
+        "get",
+        "set",
+        "defineProperty",
+        "deleteProperty",
+        "construct",
+        "apply",
+    ]),
+    BigInt: new Set(["asIntN", "asUintN"]),
+};
+
+function isResultTryCall(node: TSESTree.CallExpression): boolean {
+    return (
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.object.type === AST_NODE_TYPES.Identifier &&
+        node.callee.object.name === "result" &&
+        node.callee.property.type === AST_NODE_TYPES.Identifier &&
+        (node.callee.property.name === "try" ||
+            node.callee.property.name === "try_async")
+    );
+}
+
 /**
  * ESLint rule that enforces Result usage patterns instead of throw statements and try/catch blocks.
  *
@@ -96,20 +142,52 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
             autoFix = true,
         } = options;
         const filename = context.filename;
-
-        function isTestFile(): boolean {
-            if (!allowTestFiles) return false;
-            return /\.test\.|\.spec\.|test\/|tests\/|__tests__/.test(filename);
-        }
+        const isCurrentTestFile =
+            allowTestFiles &&
+            /\.test\.|\.spec\.|test\/|tests\/|__tests__/.test(filename);
+        const exactExceptions =
+            allowExceptions.length === 0
+                ? undefined
+                : new Set(
+                      allowExceptions.filter(
+                          (exception) => !exception.includes("*")
+                      )
+                  );
+        const wildcardExceptions =
+            allowExceptions.length === 0
+                ? undefined
+                : allowExceptions
+                      .filter((exception) => exception.includes("*"))
+                      .map(
+                          (exception) =>
+                              new RegExp(
+                                  `^${exception
+                                      .split("*")
+                                      .map((part) =>
+                                          part.replace(
+                                              /[.*+?^${}()|[\]\\]/g,
+                                              "\\$&"
+                                          )
+                                      )
+                                      .join(".*")}$`
+                              )
+                      );
+        let resultTryDepth = 0;
+        let tryStatementDepth = 0;
+        const tryStates: Array<{
+            hasAwait: boolean;
+            node: TSESTree.TryStatement;
+        }> = [];
 
         function isExceptionFunction(name: string): boolean {
-            return allowExceptions.some((exception) => {
-                if (exception.includes("*")) {
-                    const pattern = new RegExp(exception.replace(/\*/g, ".*"));
-                    return pattern.test(name);
-                }
-                return exception === name;
-            });
+            if (allowExceptions.length === 0) return false;
+
+            return (
+                exactExceptions?.has(name) === true ||
+                wildcardExceptions?.some((exception) =>
+                    exception.test(name)
+                ) === true
+            );
         }
 
         function getFunctionName(node: TSESTree.CallExpression): string {
@@ -124,122 +202,67 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
             return "";
         }
 
-        function isAlreadyWrappedInResult(node: TSESTree.Node): boolean {
-            if (node.parent === undefined) return false;
-            // Check if this call is already inside result.try() or result.try_async()
-            let parent: TSESTree.Node = node.parent;
-            while (parent) {
-                if (
-                    parent.type === AST_NODE_TYPES.ArrowFunctionExpression &&
-                    parent.parent?.type === AST_NODE_TYPES.CallExpression &&
-                    parent.parent.callee.type ===
-                        AST_NODE_TYPES.MemberExpression &&
-                    parent.parent.callee.object.type ===
-                        AST_NODE_TYPES.Identifier &&
-                    parent.parent.callee.object.name === "result" &&
-                    parent.parent.callee.property.type ===
-                        AST_NODE_TYPES.Identifier &&
-                    (parent.parent.callee.property.name === "try" ||
-                        parent.parent.callee.property.name === "try_async")
-                ) {
-                    return true;
-                }
-                if (parent.parent === undefined) return false;
-                parent = parent.parent;
-            }
-            return false;
-        }
-
-        function isInsideTryBlock(node: TSESTree.Node): boolean {
-            if (!node.parent) return false;
-
-            let parent: TSESTree.Node = node.parent;
-            while (parent) {
-                if (parent.type === AST_NODE_TYPES.TryStatement) {
-                    return true;
-                }
-
-                if (!parent.parent) break;
-                parent = parent.parent;
-            }
-            return false;
-        }
-
         function isThrowingAPI(functionName: string): boolean {
-            // Common APIs that throw exceptions
-            const throwingAPIs = [
-                "parse",
-                "parseInt",
-                "parseFloat",
-                "atob",
-                "btoa",
-                "decodeURI",
-                "decodeURIComponent",
-                "fetch",
-                "require",
-                "import",
-                "readFileSync",
-                "writeFileSync",
-            ];
-            return throwingAPIs.includes(functionName);
+            return throwingAPIs.has(functionName);
         }
 
         function isThrowingMemberAPI(node: TSESTree.CallExpression): boolean {
-            // Check for member expressions like JSON.parse
             if (
-                node.callee.type === AST_NODE_TYPES.MemberExpression &&
-                node.callee.object.type === AST_NODE_TYPES.Identifier &&
-                node.callee.property.type === AST_NODE_TYPES.Identifier
+                node.callee.type !== AST_NODE_TYPES.MemberExpression ||
+                node.callee.object.type !== AST_NODE_TYPES.Identifier ||
+                node.callee.property.type !== AST_NODE_TYPES.Identifier
             ) {
-                const objectName = node.callee.object.name;
-                const methodName = node.callee.property.name;
-
-                // Common throwing member APIs (not exhaustive - many more exist)
-                const throwingMemberAPIs = [
-                    ["JSON", "parse"],
-                    ["Proxy", "revocable"],
-                    ["Array", "from"], // Can throw with invalid length
-                    ["Object", "defineProperty"], // Can throw in various cases
-                    ["Object", "setPrototypeOf"], // Can throw if non-extensible
-                    ["String", "fromCharCode"], // Can throw RangeError for invalid code points
-                    ["String", "fromCodePoint"], // Can throw RangeError for invalid code points
-                    ["Symbol", "keyFor"], // Throws TypeError if not a symbol
-                    ["Reflect", "get"], // Throws TypeError if target is not object
-                    ["Reflect", "set"], // Throws TypeError if target is not object
-                    ["Reflect", "defineProperty"], // Can throw TypeError
-                    ["Reflect", "deleteProperty"], // Can throw TypeError
-                    ["Reflect", "construct"], // Can throw TypeError
-                    ["Reflect", "apply"], // Can throw TypeError
-                    ["BigInt", "asIntN"], // Can throw RangeError for invalid bits
-                    ["BigInt", "asUintN"], // Can throw RangeError for invalid bits
-                ];
-
-                return throwingMemberAPIs.some(
-                    ([obj, method]) =>
-                        objectName === obj && methodName === method
-                );
+                return false;
             }
-            return false;
+
+            return (
+                throwingMemberAPIs[node.callee.object.name]?.has(
+                    node.callee.property.name
+                ) === true
+            );
         }
 
-        function isAsyncFunction(node: TSESTree.CallExpression): boolean {
-            // Detect if this is likely an async call
-            const functionName = getFunctionName(node);
+        function isAsyncFunction(functionName: string): boolean {
             return (
                 functionName.includes("async") ||
                 functionName.includes("Async") ||
                 functionName.startsWith("fetch") ||
-                (/Sync$/.test(functionName) === false &&
-                    ["fetch", "import", "readFile", "writeFile"].includes(
-                        functionName
-                    ))
+                (!functionName.endsWith("Sync") && asyncAPIs.has(functionName))
             );
+        }
+
+        function reportTryStatement(
+            node: TSESTree.TryStatement,
+            hasAwait: boolean
+        ): void {
+            context.report({
+                node,
+                messageId: "noTryCatchBlock" as const,
+                fix: autoFix
+                    ? (fixer) => {
+                          const sourceCode = context.sourceCode;
+                          const tryBlockText = sourceCode.getText(node.block);
+                          const innerContent = tryBlockText.slice(1, -1);
+
+                          if (hasAwait) {
+                              return fixer.replaceText(
+                                  node,
+                                  `const result = await result.try_async(async () => {${innerContent}});`
+                              );
+                          }
+                          return fixer.replaceText(
+                              node,
+                              `const result = result.try(() => {${innerContent}});`
+                          );
+                      }
+                    : null,
+            });
         }
 
         return {
             // Detect throw statements
             ThrowStatement(node: TSESTree.ThrowStatement) {
-                if (isTestFile()) return;
+                if (isCurrentTestFile) return;
 
                 // Check if this throw is in an exception function
                 let current: TSESTree.Node = node.parent;
@@ -313,103 +336,37 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
 
             // Detect try/catch blocks
             TryStatement(node: TSESTree.TryStatement) {
-                if (isTestFile()) return;
+                if (isCurrentTestFile) return;
 
-                // Check if the try block contains async operations using simplified traversal
-                let hasAwait = false;
+                tryStatementDepth += 1;
+                tryStates.push({ hasAwait: false, node });
+            },
 
-                function detectAwait(n: TSESTree.Node): void {
-                    if (n.type === AST_NODE_TYPES.AwaitExpression) {
-                        hasAwait = true;
-                        return; // Found await, no need to continue
-                    }
-
-                    if (hasAwait) return; // Early exit if already found
-
-                    // Traverse child nodes using ESLint's visitor keys
-                    const visitorKeys =
-                        context.sourceCode.visitorKeys[n.type] || [];
-                    for (const key of visitorKeys) {
-                        const child = (n as unknown as Record<string, unknown>)[
-                            key
-                        ];
-                        if (Array.isArray(child)) {
-                            child.forEach((item) => {
-                                if (
-                                    item &&
-                                    typeof item === "object" &&
-                                    "type" in item
-                                ) {
-                                    detectAwait(item as TSESTree.Node);
-                                }
-                            });
-                        } else if (
-                            child &&
-                            typeof child === "object" &&
-                            "type" in child
-                        ) {
-                            detectAwait(child as TSESTree.Node);
-                        }
-                    }
+            AwaitExpression() {
+                for (const tryState of tryStates) {
+                    tryState.hasAwait = true;
                 }
-
-                detectAwait(node.block);
-
-                context.report({
-                    node,
-                    messageId: "noTryCatchBlock" as const,
-                    fix: autoFix
-                        ? (fixer) => {
-                              const sourceCode = context.sourceCode;
-                              const tryBlockText = sourceCode.getText(
-                                  node.block
-                              );
-
-                              // Remove braces from block and get inner content, preserving formatting
-                              const innerContent = tryBlockText.slice(1, -1);
-
-                              if (hasAwait) {
-                                  return fixer.replaceText(
-                                      node,
-                                      `const result = await result.try_async(async () => {${innerContent}});`
-                                  );
-                              } else {
-                                  return fixer.replaceText(
-                                      node,
-                                      `const result = result.try(() => {${innerContent}});`
-                                  );
-                              }
-                          }
-                        : null,
-                });
             },
 
             // Detect calls to functions that commonly throw
             CallExpression(node: TSESTree.CallExpression) {
-                if (
-                    isTestFile() ||
-                    isAlreadyWrappedInResult(node) ||
-                    isInsideTryBlock(node)
-                )
-                    return;
-
-                // Skip if this is already a result.try() or result.try_async() call
-                if (
-                    node.callee.type === AST_NODE_TYPES.MemberExpression &&
-                    node.callee.object.type === AST_NODE_TYPES.Identifier &&
-                    node.callee.object.name === "result" &&
-                    node.callee.property.type === AST_NODE_TYPES.Identifier &&
-                    (node.callee.property.name === "try" ||
-                        node.callee.property.name === "try_async")
-                ) {
+                if (isResultTryCall(node)) {
+                    resultTryDepth += 1;
                     return;
                 }
+
+                if (
+                    isCurrentTestFile ||
+                    resultTryDepth > 0 ||
+                    tryStatementDepth > 0
+                )
+                    return;
 
                 const functionName = getFunctionName(node);
                 if (!functionName || isExceptionFunction(functionName)) return;
 
                 if (isThrowingAPI(functionName) || isThrowingMemberAPI(node)) {
-                    const isAsync = isAsyncFunction(node);
+                    const isAsync = isAsyncFunction(functionName);
 
                     context.report({
                         node,
@@ -435,6 +392,23 @@ export const enforceResultUsage = createRule<Options, MessageIds>({
                               }
                             : null,
                     });
+                }
+            },
+
+            "CallExpression:exit"(node: TSESTree.CallExpression) {
+                if (isResultTryCall(node)) {
+                    resultTryDepth -= 1;
+                }
+            },
+
+            "TryStatement:exit"() {
+                if (!isCurrentTestFile) {
+                    const tryState = tryStates[tryStates.length - 1];
+                    if (tryState) {
+                        reportTryStatement(tryState.node, tryState.hasAwait);
+                    }
+                    tryStates.length -= 1;
+                    tryStatementDepth -= 1;
                 }
             },
 
