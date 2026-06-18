@@ -19,7 +19,7 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   fetch-depth: 0
                   token: ${{ secrets.RELEASE_TOKEN }}
@@ -30,6 +30,12 @@ jobs:
 
             - name: Build
               uses: ./.github/actions/build
+
+            - name: Upgrade npm
+              run: npm install --global npm@latest
+
+            - name: Verify staged publishing support
+              run: npm stage publish --help
 
             - name: Release
               env:

@@ -17,10 +17,10 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6.4.0
               with:
                   node-version: "24"
                   cache: "npm"
@@ -32,7 +32,7 @@ jobs:
               run: npm audit --audit-level=moderate
 
             - name: Run dependency vulnerability scan
-              uses: actions/dependency-review-action@v4
+              uses: actions/dependency-review-action@v5
               if: github.event_name == 'pull_request'
               with:
                   fail-on-severity: moderate
@@ -46,12 +46,12 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Initialize CodeQL
-              uses: github/codeql-action/init@v3
+              uses: github/codeql-action/init@v4
               with:
                   languages: typescript
 
             - name: Perform CodeQL Analysis
-              uses: github/codeql-action/analyze@v3
+              uses: github/codeql-action/analyze@v4
