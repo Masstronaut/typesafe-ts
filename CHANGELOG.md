@@ -1,3 +1,10 @@
+## <small>1.7.2 (2026-06-22)</small>
+
+* chore(release): 1.7.2 [skip ci] ([9a01805](https://github.com/Masstronaut/typesafe-ts/commit/9a01805))
+* chore(release): 1.7.2 [skip ci] ([7759d7b](https://github.com/Masstronaut/typesafe-ts/commit/7759d7b))
+* ci: enable staged publishing ([1aaf15b](https://github.com/Masstronaut/typesafe-ts/commit/1aaf15b))
+* perf: linting rule performance improvements ([64fdaf7](https://github.com/Masstronaut/typesafe-ts/commit/64fdaf7))
+
 ## <small>1.7.2 (2026-06-18)</small>
 
 * chore(release): 1.7.2 [skip ci] ([7759d7b](https://github.com/Masstronaut/typesafe-ts/commit/7759d7b))
