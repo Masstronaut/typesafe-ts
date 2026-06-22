@@ -24,19 +24,12 @@ jobs:
                   fetch-depth: 0
                   token: ${{ secrets.RELEASE_TOKEN }}
                   persist-credentials: false
-            - name: Setup Node.js
-              uses: actions/setup-node@v6.4.0
-              with:
-                  node-version: "lts/*"
-                  registry-url: https://registry.npmjs.org/
-            - name: Install npm 11.15.0
-              run: npm install -g npm@11.15.0
             - name: Test and validate
               uses: ./.github/actions/test-and-validate
-
             - name: Build
               uses: ./.github/actions/build
-
+            - name: Install npm 11.15.0
+              run: npm install -g npm@11.15.0
             - name: Release
               env:
                   GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
