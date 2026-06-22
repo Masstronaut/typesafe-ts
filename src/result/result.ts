@@ -381,9 +381,10 @@ class TryAsyncError extends Error {
     timestamp: number;
 }
 
-class ResultImpl<ResultType, ErrorType extends Error>
-    implements IResult<ResultType, ErrorType>
-{
+class ResultImpl<ResultType, ErrorType extends Error> implements IResult<
+    ResultType,
+    ErrorType
+> {
     value: ResultType | NoneType;
     error: ErrorType | NoneType;
     constructor(result: { ok: ResultType } | { error: ErrorType }) {
@@ -523,9 +524,9 @@ class ResultImpl<ResultType, ErrorType extends Error>
  *   .or_else(() => result.ok("Unknown"));
  * ```
  */
-class AsyncResult<ResultType, ErrorType extends Error>
-    implements PromiseLike<Result<ResultType, ErrorType>>
-{
+class AsyncResult<ResultType, ErrorType extends Error> implements PromiseLike<
+    Result<ResultType, ErrorType>
+> {
     private promise: Promise<Result<ResultType, ErrorType>>;
 
     /**
