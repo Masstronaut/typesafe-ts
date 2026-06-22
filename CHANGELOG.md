@@ -1,3 +1,7 @@
+## <small>1.7.3 (2026-06-22)</small>
+
+* ci: bump release workflow to npm 11.15.0 for stage publishing ([954d4d8](https://github.com/Masstronaut/typesafe-ts/commit/954d4d8))
+
 ## <small>1.7.2 (2026-06-22)</small>
 
 * chore(release): 1.7.2 [skip ci] ([9a01805](https://github.com/Masstronaut/typesafe-ts/commit/9a01805))
