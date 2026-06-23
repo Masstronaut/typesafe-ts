@@ -1,3 +1,17 @@
+## <small>1.7.2 (2026-06-23)</small>
+
+* chore: bump deps with npm audit fix ([d12ce0c](https://github.com/Masstronaut/typesafe-ts/commit/d12ce0c))
+* chore: bump semantic-release ([e2bfbc2](https://github.com/Masstronaut/typesafe-ts/commit/e2bfbc2))
+* chore: formatting ([c39a9fc](https://github.com/Masstronaut/typesafe-ts/commit/c39a9fc))
+* chore: formatting ([4cfe11f](https://github.com/Masstronaut/typesafe-ts/commit/4cfe11f))
+* chore(release): 1.7.2 [skip ci] ([2dcb8e4](https://github.com/Masstronaut/typesafe-ts/commit/2dcb8e4))
+* chore(release): 1.7.2 [skip ci] ([9a01805](https://github.com/Masstronaut/typesafe-ts/commit/9a01805))
+* chore(release): 1.7.2 [skip ci] ([7759d7b](https://github.com/Masstronaut/typesafe-ts/commit/7759d7b))
+* chore(release): 1.7.3 [skip ci] ([d79a846](https://github.com/Masstronaut/typesafe-ts/commit/d79a846))
+* ci: bump release workflow to npm 11.15.0 for stage publishing ([954d4d8](https://github.com/Masstronaut/typesafe-ts/commit/954d4d8))
+* ci: enable staged publishing ([1aaf15b](https://github.com/Masstronaut/typesafe-ts/commit/1aaf15b))
+* perf: linting rule performance improvements ([64fdaf7](https://github.com/Masstronaut/typesafe-ts/commit/64fdaf7))
+
 ## <small>1.7.3 (2026-06-22)</small>
 
 * ci: bump release workflow to npm 11.15.0 for stage publishing ([954d4d8](https://github.com/Masstronaut/typesafe-ts/commit/954d4d8))
