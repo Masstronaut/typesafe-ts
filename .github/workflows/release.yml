@@ -16,6 +16,13 @@ jobs:
     release:
         runs-on: ubuntu-latest
         if: github.ref == 'refs/heads/main'
+        environment: npm-release
+        permissions:
+            contents: write
+            issues: write
+            pull-requests: write
+            actions: write
+            id-token: write
 
         steps:
             - name: Checkout code
@@ -28,9 +35,10 @@ jobs:
               uses: ./.github/actions/test-and-validate
             - name: Build
               uses: ./.github/actions/build
-            - name: Install npm 11.15.0
-              run: npm install -g npm@11.15.0
+            - name: Install npm 11.x with staged publishing support
+              run: npm install -g npm@^11.15.0
             - name: Release
               env:
                   GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+                  NPM_CONFIG_PROVENANCE: "true"
               run: npx semantic-release
